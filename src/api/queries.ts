@@ -45,7 +45,8 @@ export const keys = {
 export const q = {
   nftList: (params: NftListParams) =>
     queryOptions({
-      queryKey: keys.nftList(params),
+      // Lista de favoritos é privada: fica no escopo do usuário.
+      queryKey: params.favorites ? (['user', scope(), 'nfts', params] as const) : keys.nftList(params),
       queryFn: ({ signal }) => api.listNfts(params, { signal }),
       placeholderData: keepPreviousData,
     }),

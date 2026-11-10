@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "test:unit": "playwright test --project=unit",
-    "test:api": "playwright test --project=api"
+    "test:api": "playwright test --project=api",
+    "test:e2e": "playwright test --project=desktop --project=mobile",
+    "test": "playwright test"
   },
   "dependencies": {
     "@fontsource-variable/roboto-mono": "^5.3.0",

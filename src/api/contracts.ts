@@ -104,6 +104,8 @@ export interface NftListParams {
   sort?: NftSort
   page?: number
   pageSize?: number
+  /** Só favoritos do usuário autenticado. */
+  favorites?: boolean
 }
 
 export interface Page<T> {

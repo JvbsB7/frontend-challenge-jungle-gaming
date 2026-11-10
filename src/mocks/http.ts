@@ -170,7 +170,7 @@ export const httpHandlers = [
   }),
 
   // NFTs (featured antes de :id)
-  route('get', '/nfts', ({ url }) => listNfts(url)),
+  route('get', '/nfts', ({ request, url }) => listNfts(url, optionalUser(request))),
   route('get', '/nfts/featured', (): FeaturedResponse => {
     const nfts = db().nfts
     return { hero: nfts.slice(0, 3).map(toSummary), spotlight: toSummary(nfts[1]) }

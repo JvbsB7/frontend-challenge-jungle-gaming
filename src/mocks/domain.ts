@@ -112,8 +112,11 @@ function csv<T extends string>(value: string | null, allowed: readonly T[], fiel
   return items as T[]
 }
 
-export function listNfts(url: URL): NftListResponse {
+export function listNfts(url: URL, user: UserRecord | null): NftListResponse {
   const p = url.searchParams
+  const favoritesOnly = p.get('favorites') === 'true'
+  if (favoritesOnly && !user) throw new HttpError(401, { code: 'UNAUTHORIZED', message: 'Entre para ver seus favoritos.' })
+  const favoriteIds = favoritesOnly ? (db().favorites[user!.id] ?? []) : null
   const q = (p.get('q') ?? '').trim().toLowerCase()
   const categories = csv(p.get('category'), CATEGORIES, 'category')
   const networks = csv(p.get('network'), NETWORKS, 'network')
@@ -138,6 +141,7 @@ export function listNfts(url: URL): NftListResponse {
   const base = all.filter(
     (n) =>
       (!q || n.name.toLowerCase().includes(q) || n.collection.toLowerCase().includes(q)) &&
+      (!favoriteIds || favoriteIds.includes(n.id)) &&
       (tab === 'all' || (tab === 'new' ? newest.includes(n.id) : n.reviewsCount >= 15)) &&
       (!minPrice || compareEth(n.price, minPrice) >= 0) &&
       (!maxPrice || compareEth(n.price, maxPrice) <= 0),
