@@ -31,6 +31,13 @@ export async function enableMocks(): Promise<void> {
   const params = new URLSearchParams(location.search)
   if (params.has('mockReset')) await resetDb()
   initScenario(location.search)
+  // Parâmetros de controle valem uma vez: limpa a URL para um refresh/redirect não resetar de novo.
+  if (params.has('mockReset') || params.has('scenario')) {
+    params.delete('mockReset')
+    params.delete('scenario')
+    const query = params.toString()
+    history.replaceState(history.state, '', `${location.pathname}${query ? `?${query}` : ''}${location.hash}`)
+  }
   network.configure({ handlers: [...httpHandlers, realtimeHandler] })
   await network.enable()
   // Liquida pedidos pendentes mesmo sem requisições (emite order.updated).

@@ -1,5 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { AuthScreen } from '@/components/auth/auth-screen'
+import { parseRedirect, redirectIfAuthenticated } from '@/lib/require-auth'
 
 export const Route = createFileRoute('/cadastro')({
-  component: () => <h1 className="py-10 text-2xl font-bold">Criar conta</h1>,
+  validateSearch: parseRedirect,
+  beforeLoad: redirectIfAuthenticated,
+  component: RegisterPage,
 })
+
+function RegisterPage() {
+  const { redirect } = Route.useSearch()
+  return <AuthScreen mode="register" redirect={redirect} />
+}

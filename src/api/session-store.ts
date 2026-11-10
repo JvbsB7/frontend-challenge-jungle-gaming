@@ -18,7 +18,9 @@ const listeners = new Set<Listener>()
 function read(): StoredSession | null {
   try {
     const raw = localStorage.getItem(SESSION_KEY)
-    return raw ? (JSON.parse(raw) as StoredSession) : null
+    const session = raw ? (JSON.parse(raw) as StoredSession) : null
+    // Sessão vencida enquanto a aba estava fechada: começa deslogado.
+    return session && Date.parse(session.expiresAt) > Date.now() ? session : null
   } catch {
     return null
   }
@@ -45,7 +47,9 @@ export const sessionStore = {
   },
   subscribe(listener: Listener) {
     listeners.add(listener)
-    return () => listeners.delete(listener)
+    return () => {
+      listeners.delete(listener)
+    }
   },
 }
 

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { loginViaUi } from './helpers'
 
 // Carrinho: quantidades, remoção, cupom, resumo da API, persistência após
 // refresh/login e alteração de preço via Socket.IO com o carrinho aberto.
@@ -60,12 +61,7 @@ test('carrinho do visitante persiste após refresh e é preservado no login', as
   await seedGuestCart(page)
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Violet Nomad #314' })).toBeVisible()
-  await page.evaluate(async () => {
-    const { api } = await import('/src/api/endpoints.ts')
-    const { sessionStore } = await import('/src/api/session-store.ts')
-    sessionStore.set(await api.login({ email: 'bruno@kurio.test', password: 'Kurio@123' }))
-  })
-  await page.reload()
+  await loginViaUi(page, 'bruno', '/carrinho')
   await expect(page.getByRole('heading', { name: 'Emerald Ape #042' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Violet Nomad #314' })).toBeVisible()
 })

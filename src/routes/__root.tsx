@@ -1,12 +1,33 @@
 import type { QueryClient } from '@tanstack/react-query'
-import { createRootRouteWithContext, Link, Outlet } from '@tanstack/react-router'
-import { Toaster } from 'sonner'
+import { createRootRouteWithContext, Link, Outlet, useRouter } from '@tanstack/react-router'
+import { useEffect } from 'react'
+import { toast, Toaster } from 'sonner'
+import { sessionStore } from '@/api/session-store'
 import { Footer } from '@/components/footer'
 import { Header } from '@/components/header'
 import { MobileNav } from '@/components/mobile-nav'
 import { Button } from '@/components/ui/button'
 
+const PRIVATE_PATHS = ['/pagamento', '/perfil', '/carteiras', '/pedido']
+
+/** Sessão expirada: avisa; em página privada, leva ao login e volta para o mesmo lugar. */
+function useSessionExpiryRedirect() {
+  const router = useRouter()
+  useEffect(
+    () =>
+      sessionStore.subscribe((_session, reason) => {
+        if (reason !== 'expired') return
+        toast.warning('Sua sessão expirou. Entre novamente para continuar.', { id: 'session-expired' })
+        const { pathname, href, search } = router.state.location
+        const isPrivate = PRIVATE_PATHS.some((p) => pathname.startsWith(p)) || (search as { favorites?: boolean }).favorites
+        if (isPrivate) void router.navigate({ to: '/entrar', search: { redirect: href } })
+      }),
+    [router],
+  )
+}
+
 function Layout() {
+  useSessionExpiryRedirect()
   return (
     <>
       <a href="#conteudo" className="sr-only z-50 rounded-md bg-primary px-4 py-2 text-primary-foreground focus:not-sr-only focus:fixed focus:top-2 focus:left-2">

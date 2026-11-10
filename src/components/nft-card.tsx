@@ -1,7 +1,9 @@
 import { Link } from '@tanstack/react-router'
-import { Heart } from 'lucide-react'
+import { toast } from 'sonner'
+import { Heart, Search, ShoppingCart } from 'lucide-react'
 import { cn } from 'cn'
 import type { NftSummary } from '@/api/contracts'
+import { useAddToCart } from '@/lib/cart'
 import { formatEth } from '@/lib/eth'
 import { nftSrcSet } from '@/lib/images'
 
@@ -15,6 +17,33 @@ interface Props {
 
 // Desktop: bloco 300px em bg-card com arte 250px (Figma "Product Grid").
 // Mobile: card arredondado com gradiente, coração e selo RARO (Figma "Mobile / Início").
+/** Ações do hover no desktop (Figma: carrinho, coração e lupa sobre a base da arte). */
+function HoverActions({ nft, favorite, onToggleFavorite }: Omit<Props, 'priority'>) {
+  const add = useAddToCart()
+  const action =
+    'grid size-[35px] place-items-center rounded-md bg-card text-foreground hover:text-brand focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50'
+  return (
+    <div className="absolute bottom-[3%] left-1/2 z-10 hidden -translate-x-1/2 gap-2 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 md:flex">
+      <button
+        type="button"
+        className={action}
+        aria-label={`Adicionar ${nft.name} (edição 1/50) ao carrinho`}
+        disabled={nft.available === 0 || add.isPending}
+        // Edição de referência do card: 1/50, a do preço exibido.
+        onClick={() => add.mutate({ nftId: nft.id, editionId: 'e50', quantity: 1 }, { onSuccess: () => toast.success(`${nft.name} adicionado ao carrinho.`) })}
+      >
+        <ShoppingCart className="size-5" aria-hidden />
+      </button>
+      <button type="button" className={action} aria-pressed={favorite} aria-label={`Favoritar ${nft.name}`} onClick={() => onToggleFavorite(nft)}>
+        <Heart className="size-5" fill={favorite ? 'currentColor' : 'none'} aria-hidden />
+      </button>
+      <Link to="/nft/$id" params={{ id: nft.id }} className={action} aria-label={`Ver detalhes de ${nft.name}`}>
+        <Search className="size-5" aria-hidden />
+      </Link>
+    </div>
+  )
+}
+
 export function NftCard({ nft, favorite, onToggleFavorite, priority }: Props) {
   const soldOut = nft.available === 0
   return (
@@ -33,11 +62,12 @@ export function NftCard({ nft, favorite, onToggleFavorite, priority }: Props) {
           className={cn('aspect-square w-full rounded-2xl object-cover md:w-[96.9%] md:rounded-[15px]', soldOut && 'opacity-50 grayscale')}
         />
         {nft.rare && (
-          <span className="absolute top-4 left-0 bg-primary px-2 py-2 text-[13px] leading-4 font-medium text-primary-foreground md:hidden">RARO</span>
+          <span className="absolute top-4 left-0 bg-primary px-2 py-2 text-[13px] leading-4 font-medium text-primary-foreground md:top-0 md:px-4 md:py-1 md:text-sm">RARO</span>
         )}
         {soldOut && (
           <span className="absolute top-4 right-4 rounded-md bg-background/90 px-2 py-1 text-xs font-bold text-foreground">Esgotado</span>
         )}
+        <HoverActions nft={nft} favorite={favorite} onToggleFavorite={onToggleFavorite} />
       </div>
       <div className="flex flex-col gap-1.5 pl-2 md:pl-0">
         <h3 className="text-[15px] leading-tight md:text-base md:leading-4">

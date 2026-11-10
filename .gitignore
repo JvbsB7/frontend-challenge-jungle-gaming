@@ -33,7 +33,9 @@ blob-report
 # Claude Code
 CLAUDE.md
 
-# Variáveis de ambiente locais (use .env.example como modelo)
+# Variáveis de ambiente locais (padrões no código; ver README)
 .env
 .env.*
-!.env.example
+
+# Exports do Figma (referência local, não versionar)
+docs/figma/

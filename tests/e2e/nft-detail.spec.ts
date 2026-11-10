@@ -45,13 +45,11 @@ test('favoritar: exige login; com falha da API volta ao estado anterior', async 
   await fav.click()
   await expect(page).toHaveURL(/\/entrar\?redirect=/)
 
-  // Login pela API (a tela de login vem depois) e volta ao NFT.
-  await page.evaluate(async () => {
-    const { api } = await import('/src/api/endpoints.ts')
-    const { sessionStore } = await import('/src/api/session-store.ts')
-    sessionStore.set(await api.login({ email: 'bruno@kurio.test', password: 'Kurio@123' }))
-  })
-  await page.goto('/nft/nft-003')
+  // O login volta para o NFT (redirect preservado).
+  await page.getByRole('textbox', { name: 'E-mail' }).fill('bruno@kurio.test')
+  await page.getByLabel(/^Senha/).fill('Kurio@123')
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click()
+  await expect(page).toHaveURL(/\/nft\/nft-003/)
   await fav.click()
   await expect(fav).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByText(/adicionado aos favoritos/)).toBeVisible()

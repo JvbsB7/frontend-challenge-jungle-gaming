@@ -118,3 +118,15 @@ test('sem overflow horizontal', async ({ page }) => {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
   expect(overflow).toBe(false)
 })
+
+test('ações do card no hover (desktop): adicionar ao carrinho e ver detalhes', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'ações de hover existem só no desktop (Figma)')
+  await open(page)
+  const card = cards(page).first()
+  await card.hover()
+  await card.getByRole('button', { name: /Adicionar Emerald Ape #042/ }).click()
+  await expect(page.getByText('Emerald Ape #042 adicionado ao carrinho.')).toBeVisible()
+  await expect(page.getByRole('link', { name: /Carrinho, 1 item/ })).toBeVisible()
+  await card.getByRole('link', { name: 'Ver detalhes de Emerald Ape #042' }).click()
+  await expect(page).toHaveURL(/\/nft\/nft-001/)
+})
