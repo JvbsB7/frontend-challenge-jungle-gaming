@@ -10,8 +10,8 @@ export function MobileNav() {
   const count = useCartCount()
   const session = useSession()
   const { pathname } = useLocation()
-  // O detalhe do NFT tem a própria barra de compra no lugar da navegação (Figma).
-  if (pathname.startsWith('/nft/')) return null
+  // Detalhe, carrinho e pagamento têm barras/resumos próprios no lugar da navegação (Figma).
+  if (['/nft/', '/carrinho', '/pagamento'].some((p) => pathname.startsWith(p))) return null
   return (
     <nav aria-label="Principal" className="fixed inset-x-0 bottom-0 z-40 md:hidden">
       <div className="relative mx-auto flex h-[72px] max-w-[480px] items-center justify-between rounded-t-[28px] bg-card px-6 shadow-[0_-8px_24px_rgba(10,6,4,0.5)]">
