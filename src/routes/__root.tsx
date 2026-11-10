@@ -1,5 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query'
-import { createRootRouteWithContext, Link, Outlet, useRouter } from '@tanstack/react-router'
+import { createRootRouteWithContext, Link, Outlet, useLocation, useRouter } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { toast, Toaster } from 'sonner'
 import { sessionStore } from '@/api/session-store'
@@ -15,17 +15,23 @@ function useSessionExpiryRedirect() {
   useEffect(
     () =>
       sessionStore.subscribe((_session, reason) => {
+        const { href } = router.state.location
+        // Sair numa página privada: vai para a Início (a página deixaria de ter dados).
+        if (reason === 'logout' && isPrivatePath(href)) return void router.navigate({ to: '/' })
         if (reason !== 'expired') return
         toast.warning('Sua sessão expirou. Entre novamente para continuar.', { id: 'session-expired' })
-        const { href } = router.state.location
         if (isPrivatePath(href)) void router.navigate({ to: '/entrar', search: { redirect: href } })
       }),
     [router],
   )
 }
 
+// Telas de conta não têm rodapé no Figma.
+const NO_FOOTER = ['/perfil', '/carteiras']
+
 function Layout() {
   useSessionExpiryRedirect()
+  const { pathname } = useLocation()
   return (
     <>
       <a href="#conteudo" className="sr-only z-50 rounded-md bg-primary px-4 py-2 text-primary-foreground focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
@@ -36,7 +42,7 @@ function Layout() {
         <main id="conteudo" tabIndex={-1} className="outline-none">
           <Outlet />
         </main>
-        <Footer />
+        {!NO_FOOTER.includes(pathname) && <Footer />}
       </div>
       <MobileNav />
       <Toaster

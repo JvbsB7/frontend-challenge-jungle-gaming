@@ -1,7 +1,7 @@
 import type { BuyerInput } from '@/api/contracts'
 import { EMAIL_RE, type FieldErrors } from './form'
 
-export type BuyerValues = Partial<BuyerInput>
+export type BuyerValues = Partial<BuyerInput> & { nickname?: string }
 
 const EVM = /^0x[a-fA-F0-9]{40}$/
 const SOLANA = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/
@@ -29,4 +29,10 @@ export function validateBuyer(v: BuyerValues): FieldErrors {
     email: EMAIL_RE.test(t(v.email)) ? undefined : 'E-mail inválido',
     ensName: ENS.test(t(v.ensName).replace(/\.eth$/, '')) ? undefined : 'Nome ENS inválido',
   }
+}
+
+/** Carteira (tela Carteiras): mesmos campos do comprador, com apelido no lugar do usuário (Figma: obrigatório). */
+export function validateWallet(v: BuyerValues): FieldErrors {
+  const { username: _u, ...errors } = validateBuyer({ ...v, username: 'ok' })
+  return { ...errors, nickname: (v.nickname ?? '').trim() ? undefined : 'Informe o apelido da carteira' }
 }

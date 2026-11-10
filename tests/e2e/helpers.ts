@@ -12,6 +12,8 @@ export async function loginViaUi(page: Page, user: keyof typeof USERS, redirect 
   await page.getByLabel(/^Senha/).fill(USERS[user].password)
   await page.getByRole('button', { name: 'Entrar', exact: true }).click()
   await expect(page).not.toHaveURL(/\/entrar/)
+  // A URL muda antes de o formulário de login sair da tela: espera ele sumir.
+  await expect(page.getByRole('button', { name: 'Entrar', exact: true })).toHaveCount(0)
 }
 
 /** Sair: botão do cabeçalho no desktop; no mobile o botão fica no perfil. */
@@ -19,7 +21,7 @@ export async function logout(page: Page, isMobile: boolean) {
   if (isMobile) {
     await page.evaluate(async () => (await import('/src/lib/auth.ts')).logout())
   } else {
-    await page.getByRole('button', { name: 'Sair' }).click()
+    await page.getByRole('banner').getByRole('button', { name: 'Sair' }).click()
   }
   await expect.poll(() => page.evaluate(() => localStorage.getItem('kurio.session'))).toBeNull()
 }
