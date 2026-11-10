@@ -1,10 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Button } from '@/components/ui/button'
+import { parseCatalogSearch } from '@/lib/catalog-search'
 
 export const Route = createFileRoute('/')({
-  component: () => (
-    <main className="p-8">
-      <Button>NFT Marketplace</Button>
-    </main>
-  ),
+  validateSearch: parseCatalogSearch,
+  component: () => <h1 className="py-10 text-2xl font-bold">Início</h1>,
 })

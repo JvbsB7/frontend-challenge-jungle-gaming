@@ -32,3 +32,8 @@ blob-report
 
 # Claude Code
 CLAUDE.md
+
+# Variáveis de ambiente locais (use .env.example como modelo)
+.env
+.env.*
+!.env.example

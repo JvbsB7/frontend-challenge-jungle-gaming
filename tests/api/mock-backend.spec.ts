@@ -5,7 +5,9 @@ import { expect, test, type Page } from '@playwright/test'
 
 async function boot(page: Page, scenario = 'default') {
   await page.goto(`/?mockReset=1&scenario=${scenario}`)
-  await page.waitForFunction(() => window.__kurio !== undefined)
+  // Mocks sobem antes da app: espera a app renderizar e o socket conectar.
+  await page.locator('main').waitFor()
+  await page.waitForFunction(() => (window.__kurio?.connectionCount() ?? 0) > 0)
 }
 
 test('fluxo de compra: carrinho de visitante, cupom, idempotência e confirmação via socket', async ({ page }) => {
