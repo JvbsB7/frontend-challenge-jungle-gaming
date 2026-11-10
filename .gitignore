@@ -39,3 +39,6 @@ CLAUDE.md
 
 # Exports do Figma (referência local, não versionar)
 docs/figma/
+
+# Cache temporário do plugin do TanStack Router
+.tanstack/
