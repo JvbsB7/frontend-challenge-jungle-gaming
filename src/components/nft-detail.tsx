@@ -11,7 +11,7 @@ import mail from '@/assets/share/mail.svg'
 import twitter from '@/assets/share/twitter.svg'
 import { NftCard } from '@/components/nft-card'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { maxQuantity, useAddToCart } from '@/lib/cart'
 import { formatEth } from '@/lib/eth'
 import { useFavoriteIds, useToggleFavorite } from '@/lib/favorites'
@@ -45,7 +45,6 @@ function Rating({ nft }: { nft: Nft }) {
 
 function Gallery({ nft }: { nft: Nft }) {
   const [index, setIndex] = useState(0)
-  const [zoom, setZoom] = useState(false)
   const image = nft.images[index] ?? nft.image
   return (
     <div className="flex gap-7 md:h-[448px]">
@@ -75,22 +74,24 @@ function Gallery({ nft }: { nft: Nft }) {
           fetchPriority="high"
           className="aspect-square w-full rounded-3xl object-cover"
         />
-        <button
-          type="button"
-          onClick={() => setZoom(true)}
-          aria-label="Ampliar imagem"
-          className="absolute top-4 right-4 grid size-[30px] place-items-center rounded-full bg-background/70 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
-        >
-          <ZoomIn className="size-4" aria-hidden />
-        </button>
-      </div>
-      <Dialog open={zoom} onOpenChange={setZoom}>
-        <DialogContent className="max-w-[min(90vw,900px)] bg-card p-4 sm:max-w-[min(90vw,900px)]">
+        {/* DialogTrigger: ao fechar, o Radix devolve o foco a este botão. */}
+        <Dialog>
+          <DialogTrigger asChild>
+            <button
+              type="button"
+              aria-label="Ampliar imagem"
+              className="absolute top-4 right-4 grid size-[30px] place-items-center rounded-full bg-background/70 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+            >
+              <ZoomIn className="size-4" aria-hidden />
+            </button>
+          </DialogTrigger>
+          <DialogContent className="max-w-[min(90vw,900px)] bg-card p-4 sm:max-w-[min(90vw,900px)]">
           <DialogTitle>{nft.name}</DialogTitle>
           <DialogDescription className="sr-only">Imagem ampliada</DialogDescription>
-          <img src={image} alt={nft.name} width={1000} height={1000} className="max-h-[80vh] w-full rounded-2xl object-contain" />
-        </DialogContent>
-      </Dialog>
+            <img src={image} alt={nft.name} width={1000} height={1000} className="max-h-[80vh] w-full rounded-2xl object-contain" />
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   )
 }
