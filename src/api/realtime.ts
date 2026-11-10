@@ -32,6 +32,12 @@ function applyNft(client: QueryClient, event: NftUpdatedEvent): void {
   const id = event.resource.id
   const detail = client.getQueryData<Nft>(keys.nft(id))
   if (!accept(event, detail?.version)) return
+  // Estado anterior para avisos ("preço mudou de X para Y"): detalhe ou qualquer lista em cache.
+  const fromList = client
+    .getQueriesData<NftListResponse>({ queryKey: [...keys.nfts, 'list'] })
+    .flatMap(([, data]) => data?.items ?? [])
+    .find((n) => n.id === id)
+  const before = detail ?? fromList
   const patch = { ...event.data, version: event.version }
   client.setQueryData<Nft>(keys.nft(id), (old) => (old ? { ...old, ...patch } : old))
   client.setQueriesData<NftListResponse>({ queryKey: [...keys.nfts, 'list'] }, (old) =>
@@ -47,7 +53,7 @@ function applyNft(client: QueryClient, event: NftUpdatedEvent): void {
   void client.invalidateQueries({ queryKey: keys.cart(s) })
   void client.invalidateQueries({ queryKey: [...keys.private(s), 'quote'] })
   realtimeBus.dispatchEvent(
-    new CustomEvent<NftChangeDetail>('nft-change', { detail: { event, previous: detail && { price: detail.price, available: detail.available } } }),
+    new CustomEvent<NftChangeDetail>('nft-change', { detail: { event, previous: before && { price: before.price, available: before.available } } }),
   )
 }
 

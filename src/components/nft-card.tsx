@@ -59,7 +59,7 @@ export function NftCard({ nft, favorite, onToggleFavorite, priority }: Props) {
       <button
         type="button"
         aria-pressed={favorite}
-        aria-label={favorite ? `Remover ${nft.name} dos favoritos` : `Favoritar ${nft.name}`}
+        aria-label={`Favoritar ${nft.name}`}
         onClick={() => onToggleFavorite(nft)}
         className="absolute top-3 right-3 z-10 grid size-8 place-items-center rounded-lg bg-background/70 text-primary focus-visible:ring-3 focus-visible:ring-ring/50 md:hidden"
       >

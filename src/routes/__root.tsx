@@ -23,6 +23,9 @@ function Layout() {
       <Toaster
         theme="dark"
         position="top-center"
+        // Abaixo do cabeçalho: não cobre voltar/favoritar (mobile) nem a navegação (desktop).
+        offset={{ top: 80 }}
+        mobileOffset={{ top: 64 }}
         toastOptions={{ classNames: { toast: '!bg-card !text-foreground !border-border !font-sans' } }}
       />
     </>
