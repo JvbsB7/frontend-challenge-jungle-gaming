@@ -17,9 +17,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-// Um socket por sessão. Ao entrar, sair ou expirar: fecha o socket anterior,
-// descarta todo dado privado do cache e abre um socket novo com o token atual.
-let disconnectRealtime = connectRealtime(queryClient, sessionStore.get())
 let expiryTimer: ReturnType<typeof setTimeout> | undefined
 
 // Expira a sessão localmente no horário informado pela API (a UI redireciona ao login).
@@ -27,19 +24,24 @@ function scheduleExpiry(session: StoredSession | null) {
   clearTimeout(expiryTimer)
   if (session) expiryTimer = setTimeout(() => sessionStore.clear('expired'), Math.max(0, Date.parse(session.expiresAt) - Date.now()))
 }
-scheduleExpiry(sessionStore.get())
+/** Inicia a app. Chamado pelo main.tsx só depois que os mocks (se ligados) estão ativos. */
+export function startApp() {
+  // Um socket por sessão. Ao entrar, sair ou expirar: fecha o socket anterior,
+  // descarta todo dado privado do cache e abre um socket novo com o token atual.
+  let disconnectRealtime = connectRealtime(queryClient, sessionStore.get())
+  scheduleExpiry(sessionStore.get())
+  sessionStore.subscribe((session) => {
+    disconnectRealtime()
+    queryClient.removeQueries({ queryKey: keys.user })
+    disconnectRealtime = connectRealtime(queryClient, session)
+    scheduleExpiry(session)
+  })
 
-sessionStore.subscribe((session) => {
-  disconnectRealtime()
-  queryClient.removeQueries({ queryKey: keys.user })
-  disconnectRealtime = connectRealtime(queryClient, session)
-  scheduleExpiry(session)
-})
-
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  </StrictMode>,
-)
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </StrictMode>,
+  )
+}

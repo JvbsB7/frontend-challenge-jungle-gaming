@@ -1,3 +1,4 @@
+import { network } from 'virtual:msw'
 import { initDb, resetDb } from './db'
 import { expireAllSessions, settleDueOrders, updateEdition } from './domain'
 import { httpHandlers } from './http'
@@ -26,7 +27,6 @@ declare global {
 }
 
 export async function enableMocks(): Promise<void> {
-  const { network } = await import('virtual:msw')
   await initDb()
   const params = new URLSearchParams(location.search)
   if (params.has('mockReset')) await resetDb()
@@ -38,7 +38,13 @@ export async function enableMocks(): Promise<void> {
     const query = params.toString()
     history.replaceState(history.state, '', `${location.pathname}${query ? `?${query}` : ''}${location.hash}`)
   }
-  network.configure({ handlers: [...httpHandlers, realtimeHandler] })
+  network.configure({
+    handlers: [...httpHandlers, realtimeHandler],
+    // Em produção (demo/Lighthouse), sem log por requisição no console: custa CPU e polui o console.
+    context: { quiet: !import.meta.env.DEV },
+    // Imagens/fontes/assets não têm handler: seguem para a rede sem aviso.
+    onUnhandledFrame: 'bypass',
+  })
   await network.enable()
   // Liquida pedidos pendentes mesmo sem requisições (emite order.updated).
   setInterval(() => settleDueOrders(), 500)

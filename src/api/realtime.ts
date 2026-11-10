@@ -1,5 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query'
-import { io, type Socket } from 'socket.io-client'
+import type { Socket } from 'socket.io-client'
 import type { FeaturedResponse, Nft, NftListResponse, NftUpdatedEvent, Order, OrderUpdatedEvent, ServerToClientEvents } from './contracts'
 import { keys, scope } from './queries'
 import { SOCKET_URL } from './socket-url'
@@ -68,30 +68,40 @@ function applyOrder(client: QueryClient, event: OrderUpdatedEvent, userId: strin
   realtimeBus.dispatchEvent(new CustomEvent<Order>('order-change', { detail: event.data }))
 }
 
-/** Abre o socket da sessão atual. Retorna a função que libera listeners e conexão. */
+/**
+ * Abre o socket da sessão atual. Retorna a função que libera listeners e conexão.
+ * O socket.io-client é importado sob demanda: o engine.io-client guarda o WebSocket global
+ * ao ser carregado, e com mocks ativos ele precisa enxergar o WebSocket do MSW.
+ */
 export function connectRealtime(client: QueryClient, session: { token: string; userId: string } | null): () => void {
-  const socket: Socket<ServerToClientEvents> = io(SOCKET_URL, {
-    transports: ['websocket'],
-    query: session ? { token: session.token } : {},
-    reconnectionDelay: 500,
-    reconnectionDelayMax: 3000,
-  })
+  let socket: Socket<ServerToClientEvents> | undefined
+  let disposed = false
   const status = (s: RealtimeStatus) => realtimeBus.dispatchEvent(new CustomEvent<RealtimeStatus>('status', { detail: s }))
   let connectedBefore = false
 
   status('connecting')
-  socket.on('connect', () => {
-    status('online')
-    // Reconexão: eventos perdidos durante a queda são recuperados pela API REST.
-    if (connectedBefore) void client.invalidateQueries({ refetchType: 'active' })
-    connectedBefore = true
+  void import('socket.io-client').then(({ io }) => {
+    if (disposed) return
+    socket = io(SOCKET_URL, {
+      transports: ['websocket'],
+      query: session ? { token: session.token } : {},
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 3000,
+    })
+    socket.on('connect', () => {
+      status('online')
+      // Reconexão: eventos perdidos durante a queda são recuperados pela API REST.
+      if (connectedBefore) void client.invalidateQueries({ refetchType: 'active' })
+      connectedBefore = true
+    })
+    socket.on('disconnect', () => status('offline'))
+    socket.on('nft.updated', (event) => applyNft(client, event))
+    socket.on('order.updated', (event) => session && applyOrder(client, event, session.userId))
   })
-  socket.on('disconnect', () => status('offline'))
-  socket.on('nft.updated', (event) => applyNft(client, event))
-  socket.on('order.updated', (event) => session && applyOrder(client, event, session.userId))
 
   return () => {
-    socket.removeAllListeners()
-    socket.disconnect()
+    disposed = true
+    socket?.removeAllListeners()
+    socket?.disconnect()
   }
 }

@@ -164,7 +164,7 @@ function Share({ nft }: { nft: Nft }) {
       <p className="text-[15px] leading-4 font-bold">Compartilhar este NFT:</p>
       {links.map((l) => (
         <a key={l.name} href={l.href} target="_blank" rel="noopener noreferrer" className="grid size-6 place-items-center rounded focus-visible:ring-3 focus-visible:ring-ring/50">
-          <img src={l.icon} alt={`Compartilhar por ${l.name} (abre em nova aba)`} className="max-h-4 w-auto" />
+          <img src={l.icon} alt={`Compartilhar por ${l.name} (abre em nova aba)`} width={16} height={16} className="size-4 object-contain" />
         </a>
       ))}
     </div>
@@ -380,23 +380,28 @@ export function NftDetail({ nft, editionId, onEdition }: { nft: Nft; editionId?:
   )
 }
 
+/** Mesmo esqueleto do layout real (trilha, galeria 448px, colunas) para não deslocar a página (CLS). */
 export function NftDetailSkeleton() {
   return (
-    <div className="mt-10 grid gap-8 md:grid-cols-[573px_1fr]" aria-busy="true" aria-label="Carregando NFT">
-      <div className="flex gap-7">
-        <div className="hidden flex-col gap-4 md:flex">
-          {Array.from({ length: 4 }, (_, i) => (
-            <div key={i} className="skeleton size-[100px] rounded-lg" />
-          ))}
+    <div className="pb-44 md:pb-0" aria-busy="true" aria-label="Carregando NFT">
+      <div className="mt-7 hidden h-4 md:block" />
+      <div className="h-9 md:hidden" />
+      <div className="mt-3 grid gap-8 md:grid-cols-[minmax(0,573px)_1fr]">
+        <div className="flex gap-7 md:h-[448px]">
+          <div className="hidden flex-col gap-4 md:flex">
+            {Array.from({ length: 4 }, (_, i) => (
+              <div key={i} className="skeleton size-[100px] rounded-lg" />
+            ))}
+          </div>
+          <div className="skeleton aspect-square w-full max-w-[444px] rounded-md" />
         </div>
-        <div className="skeleton aspect-square w-full max-w-[444px] rounded-md" />
-      </div>
-      <div className="flex flex-col gap-5">
-        <div className="skeleton h-8 w-2/3 rounded" />
-        <div className="skeleton h-6 w-1/4 rounded" />
-        <div className="skeleton h-20 w-full rounded" />
-        <div className="skeleton h-7 w-1/2 rounded" />
-        <div className="skeleton h-12 w-full rounded" />
+        <div className="flex flex-col gap-5 md:h-[448px]">
+          <div className="skeleton h-8 w-2/3 rounded" />
+          <div className="skeleton h-6 w-1/4 rounded" />
+          <div className="skeleton h-20 w-full rounded" />
+          <div className="skeleton h-7 w-1/2 rounded" />
+          <div className="skeleton h-12 w-full rounded" />
+        </div>
       </div>
     </div>
   )

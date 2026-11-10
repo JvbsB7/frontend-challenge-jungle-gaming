@@ -84,7 +84,7 @@ function PriceFilter({ search, facets, onChange }: Props) {
           value={value}
           onValueChange={(v) => setDraft([v[0], v[1]])}
           thumbLabels={['Preço mínimo', 'Preço máximo']}
-          aria-valuetext={`${br(value[0])} a ${br(value[1])} ETH`}
+          thumbValueTexts={[`${br(value[0])} ETH`, `${br(value[1])} ETH`]}
         />
         <p className="text-[15px]" aria-live="polite">
           Preço: {br(value[0])} - {br(value[1])} ETH

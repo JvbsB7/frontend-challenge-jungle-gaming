@@ -6,10 +6,10 @@ import { toast } from 'sonner'
 import { cn } from 'cn'
 import type { NftSummary } from '@/api/contracts'
 import { q } from '@/api/queries'
-import heroMobileMask from '@/assets/decor/hero-mobile-mask.svg'
 import promoMask from '@/assets/decor/promo-mask.svg'
 import { Button } from '@/components/ui/button'
 import { nftSrcSet } from '@/lib/images'
+import { HeroMobileMask } from './hero-mobile-mask'
 
 function Dots({ count, active, onSelect, label }: { count: number; active: number; onSelect: (i: number) => void; label: string }) {
   return (
@@ -85,7 +85,7 @@ export function Hero() {
 
       {/* Mobile */}
       <section aria-label="Destaques" className="relative mt-4 overflow-hidden rounded-[30px] p-4 md:hidden">
-        <img src={heroMobileMask} alt="" aria-hidden className="absolute inset-0 size-full object-cover" />
+        <HeroMobileMask />
         <div className="relative flex flex-col items-center gap-4">
           <div className="flex w-full items-center gap-2">
             <div className="flex min-w-0 flex-1 flex-col gap-1.5">
