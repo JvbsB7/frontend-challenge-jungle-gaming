@@ -20,6 +20,6 @@ export function fromApiError(error: unknown): { fields: FieldErrors; message: st
 }
 
 /** Leva o foco ao primeiro campo inválido (após o React aplicar aria-invalid). */
-export function focusFirstInvalid(form: HTMLFormElement | null) {
+export function focusFirstInvalid(form: HTMLElement | null) {
   requestAnimationFrame(() => form?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus())
 }

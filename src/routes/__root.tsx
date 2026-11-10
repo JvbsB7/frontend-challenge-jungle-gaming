@@ -3,12 +3,11 @@ import { createRootRouteWithContext, Link, Outlet, useRouter } from '@tanstack/r
 import { useEffect } from 'react'
 import { toast, Toaster } from 'sonner'
 import { sessionStore } from '@/api/session-store'
+import { isPrivatePath } from '@/lib/require-auth'
 import { Footer } from '@/components/footer'
 import { Header } from '@/components/header'
 import { MobileNav } from '@/components/mobile-nav'
 import { Button } from '@/components/ui/button'
-
-const PRIVATE_PATHS = ['/pagamento', '/perfil', '/carteiras', '/pedido']
 
 /** Sessão expirada: avisa; em página privada, leva ao login e volta para o mesmo lugar. */
 function useSessionExpiryRedirect() {
@@ -18,9 +17,8 @@ function useSessionExpiryRedirect() {
       sessionStore.subscribe((_session, reason) => {
         if (reason !== 'expired') return
         toast.warning('Sua sessão expirou. Entre novamente para continuar.', { id: 'session-expired' })
-        const { pathname, href, search } = router.state.location
-        const isPrivate = PRIVATE_PATHS.some((p) => pathname.startsWith(p)) || (search as { favorites?: boolean }).favorites
-        if (isPrivate) void router.navigate({ to: '/entrar', search: { redirect: href } })
+        const { href } = router.state.location
+        if (isPrivatePath(href)) void router.navigate({ to: '/entrar', search: { redirect: href } })
       }),
     [router],
   )

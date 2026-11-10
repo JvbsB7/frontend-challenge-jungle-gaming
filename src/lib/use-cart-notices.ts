@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { Cart, CartItem } from '@/api/contracts'
 import { keys, scope } from '@/api/queries'
@@ -18,12 +18,18 @@ const lineKey = (i: Pick<CartItem, 'nftId' | 'editionId'>) => `${i.nftId}:${i.ed
  * Mudanças recebidas pelo Socket.IO para itens do carrinho: guarda "de → para"
  * para exibir na linha e avisa por toast (aria-live). O resumo é recalculado pela API.
  */
-export function useCartNotices() {
+/** `enabled=false` silencia os avisos (ex.: durante o envio do próprio pedido, que reserva estoque). */
+export function useCartNotices(enabled = true) {
   const client = useQueryClient()
   const [notices, setNotices] = useState<Record<string, LineNotice>>({})
+  const enabledRef = useRef(enabled)
+  useEffect(() => {
+    enabledRef.current = enabled
+  })
 
   useEffect(() => {
     const onChange = (e: Event) => {
+      if (!enabledRef.current) return
       const { event } = (e as CustomEvent<NftChangeDetail>).detail
       const cart = client.getQueryData<Cart>(keys.cart(scope()))
       for (const item of cart?.items ?? []) {

@@ -422,7 +422,7 @@ export function settleDueOrders(now = Date.now()): void {
     order.version += 1
     order.updatedAt = new Date(now).toISOString()
     if (order.outcome === 'confirmed') {
-      order.txHash = `0x${fnv1a(order.id)}${fnv1a(order.idempotencyKey)}${'0'.repeat(48)}`.slice(0, 66)
+      order.txHash = `0x${Array.from({ length: 8 }, (_, i) => fnv1a(`${order.id}:${order.idempotencyKey}:${i}`)).join('')}`
       order.explorerUrl = `${EXPLORERS[order.network]}${order.txHash}`
       // Remove do carrinho apenas o que foi comprado.
       const key = `user:${order.userId}`

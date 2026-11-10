@@ -81,3 +81,20 @@ test('logout e troca de usuário não exibem dados do anterior', async ({ page, 
   await expect(page.getByText('Nenhum NFT encontrado.')).toBeVisible()
   await expect(page.locator('#catalogo').getByRole('heading', { name: 'Emerald Ape #042' })).toHaveCount(0)
 })
+
+test('fechar o login vindo de página privada volta à página anterior (sem ciclo)', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'o modal com botão Fechar é do desktop; no mobile é tela cheia')
+  // Navegação dentro da app (como o usuário): do carrinho para uma página privada.
+  await page.goto('/carrinho')
+  await page.getByRole('contentinfo').getByRole('link', { name: 'Meu perfil' }).click()
+  await expect(page).toHaveURL(/\/entrar\?redirect=%2Fperfil/)
+  await page.getByRole('button', { name: 'Fechar' }).click()
+  await expect(page).toHaveURL(/\/carrinho$/)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+
+  // Com Esc, a partir de um destino público, volta ao destino.
+  await page.goto('/entrar?redirect=%2Fnft%2Fnft-001')
+  await expect(page.getByRole('textbox', { name: 'E-mail' })).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(page).toHaveURL(/\/nft\/nft-001/)
+})

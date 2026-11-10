@@ -1,7 +1,8 @@
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useRouter } from '@tanstack/react-router'
 import { X } from 'lucide-react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import { HomePage } from '@/components/home/home-page'
+import { isPrivatePath } from '@/lib/require-auth'
 import { useMediaQuery } from '@/lib/use-media-query'
 import { AuthForm, type AuthMode } from './auth-form'
 
@@ -15,6 +16,14 @@ const noop = () => {}
 export function AuthScreen({ mode, redirect }: { mode: AuthMode; redirect?: string }) {
   const desktop = useMediaQuery('(min-width: 768px)')
   const navigate = useNavigate()
+  const router = useRouter()
+
+  // Fechar sem entrar: destino privado reabriria o login (ciclo). Volta para a página anterior.
+  const close = () => {
+    if (redirect && !isPrivatePath(redirect)) return void navigate({ to: redirect, replace: true })
+    if (router.history.canGoBack()) return router.history.back()
+    void navigate({ to: '/', replace: true })
+  }
 
   if (!desktop) return <AuthForm mode={mode} redirect={redirect} />
 
@@ -24,7 +33,7 @@ export function AuthScreen({ mode, redirect }: { mode: AuthMode; redirect?: stri
       <div inert aria-hidden>
         <HomePage search={{}} onChange={noop} />
       </div>
-      <DialogPrimitive.Root open onOpenChange={(open) => !open && void navigate({ to: redirect ?? '/', replace: true })}>
+      <DialogPrimitive.Root open onOpenChange={(open) => !open && close()}>
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay className="fixed inset-0 z-50" />
           <DialogPrimitive.Content
