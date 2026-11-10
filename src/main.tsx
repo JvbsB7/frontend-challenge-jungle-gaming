@@ -1,23 +1,8 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { createRouter, RouterProvider } from '@tanstack/react-router'
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import { routeTree } from './routeTree.gen'
-
-const queryClient = new QueryClient()
-const router = createRouter({ routeTree, context: { queryClient }, defaultPreload: 'intent' })
-
-declare module '@tanstack/react-router' {
-  interface Register {
-    router: typeof router
-  }
+// Os mocks precisam ser ativados ANTES de carregar a app: o engine.io-client guarda
+// o WebSocket global ao ser importado, e o MSW só o substitui em network.enable().
+if (import.meta.env.VITE_ENABLE_MOCKS === 'true') {
+  const { enableMocks } = await import('./mocks')
+  await enableMocks()
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  </StrictMode>,
-)
+await import('./app')
