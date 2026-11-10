@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react'
-import { useId } from 'react'
+import { useId, useRef } from 'react'
 import { cn } from 'cn'
 import { ApiError } from '@/api/client'
 import { NFT_SORTS, NFT_TABS, type NftSummary } from '@/api/contracts'
@@ -22,19 +22,32 @@ interface Props {
   aside?: React.ReactNode
 }
 
+/** Páginas visíveis: primeira, última e vizinhas da atual, com "…" nos saltos (cabe em 390px). */
+function pageWindow(page: number, total: number): Array<number | 'gap'> {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const pages = new Set([1, total, page - 1, page, page + 1].filter((p) => p >= 1 && p <= total))
+  const sorted = [...pages].sort((a, b) => a - b)
+  return sorted.flatMap((p, i) => (i > 0 && p - sorted[i - 1] > 1 ? (['gap', p] as const) : [p]))
+}
+
 function Pagination({ page, totalPages, onPage }: { page: number; totalPages: number; onPage: (p: number) => void }) {
   if (totalPages <= 1) return null
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1)
+  const pages = pageWindow(page, totalPages)
   const cell = 'grid size-[35px] place-items-center rounded-md text-sm font-bold focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none'
   return (
-    <nav aria-label="Paginação" className="flex justify-end">
-      <ul className="flex flex-wrap gap-2">
+    <nav aria-label="Paginação" className="flex justify-center md:justify-end">
+      <ul className="flex flex-wrap justify-center gap-2">
         <li>
           <button type="button" className={cn(cell, 'bg-card disabled:opacity-40')} disabled={page <= 1} onClick={() => onPage(page - 1)} aria-label="Página anterior">
             <ChevronLeft className="size-4" aria-hidden />
           </button>
         </li>
-        {pages.map((p) => (
+        {pages.map((p, i) =>
+          p === 'gap' ? (
+            <li key={`gap-${i}`} className="grid size-[35px] place-items-center text-sm text-muted-foreground" aria-hidden>
+              …
+            </li>
+          ) : (
           <li key={p}>
             <button
               type="button"
@@ -46,7 +59,8 @@ function Pagination({ page, totalPages, onPage }: { page: number; totalPages: nu
               {p}
             </button>
           </li>
-        ))}
+          ),
+        )}
         <li>
           <button type="button" className={cn(cell, 'bg-card disabled:opacity-40')} disabled={page >= totalPages} onClick={() => onPage(page + 1)} aria-label="Próxima página">
             <ChevronRight className="size-4" aria-hidden />
@@ -59,6 +73,7 @@ function Pagination({ page, totalPages, onPage }: { page: number; totalPages: nu
 
 export function Catalog({ search, onChange, aside }: Props) {
   const sortId = useId()
+  const resultsRef = useRef<HTMLHeadingElement>(null)
   const params = { ...search, page: search.page ?? 1, pageSize: PAGE_SIZE }
   const { data, error, isPending, isFetching, isPlaceholderData, refetch } = useQuery(q.nftList(params))
   const favorites = useFavoriteIds()
@@ -146,6 +161,10 @@ export function Catalog({ search, onChange, aside }: Props) {
           </p>
         )}
 
+        {/* Âncora de rolagem/foco ao trocar de página (abaixo do cabeçalho fixo da lista). */}
+        <h3 ref={resultsRef} tabIndex={-1} className="sr-only scroll-mt-24 focus:outline-none">
+          Resultados
+        </h3>
         {/* Anúncio para leitores de tela quando a lista muda. */}
         <p className="sr-only" aria-live="polite">
           {isPending ? 'Carregando NFTs' : data ? `${data.total} NFTs encontrados, página ${data.page} de ${data.totalPages}` : ''}
@@ -195,7 +214,19 @@ export function Catalog({ search, onChange, aside }: Props) {
         )}
 
         {data && error && <p role="alert" className="text-sm text-destructive">Falha ao atualizar a lista. Exibindo os últimos resultados.</p>}
-        {data && <Pagination page={data.page} totalPages={data.totalPages} onPage={(page) => onChange({ page: page > 1 ? page : undefined }, { keepPage: true })} />}
+        {data && (
+          <Pagination
+            page={data.page}
+            totalPages={data.totalPages}
+            onPage={(page) => {
+              onChange({ page: page > 1 ? page : undefined }, { keepPage: true })
+              // Sem isso a tela fica na paginação (fim da lista) e só o último card da página nova aparece.
+              const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+              resultsRef.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+              resultsRef.current?.focus({ preventScroll: true })
+            }}
+          />
+        )}
       </div>
     </section>
   )

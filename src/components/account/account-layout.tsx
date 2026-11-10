@@ -21,15 +21,15 @@ const ITEMS: Item[] = [
 ]
 
 const itemClass =
-  'relative flex h-[45px] shrink-0 items-center gap-3 px-4 text-[15px] text-brand focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none hover:bg-surface max-md:rounded-full max-md:border max-md:border-border max-md:px-4'
+  'relative flex h-[45px] shrink-0 items-center gap-3 px-4 text-[15px] text-brand focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none hover:bg-surface max-lg:rounded-full max-lg:border max-lg:border-border max-lg:px-4'
 
 export function AccountLayout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation()
   return (
-    <div className="mt-6 grid grid-cols-1 gap-6 md:mt-8 md:grid-cols-[310px_1fr] md:gap-7">
-      <nav aria-label="Meu perfil" className="min-w-0 self-start bg-card md:pb-3">
-        <h2 className="hidden px-2.5 pt-4 pb-2 text-lg font-bold md:block">Meu perfil</h2>
-        <ul className="flex gap-2 overflow-x-auto p-2 md:flex-col md:gap-0 md:overflow-visible md:p-0">
+    <div className="mt-6 grid grid-cols-1 gap-6 md:mt-8 lg:grid-cols-[310px_1fr] lg:gap-7">
+      <nav aria-label="Meu perfil" className="min-w-0 self-start bg-card lg:pb-3">
+        <h2 className="hidden px-2.5 pt-4 pb-2 text-lg font-bold lg:block">Meu perfil</h2>
+        <ul className="flex gap-2 overflow-x-auto p-2 lg:flex-col lg:gap-0 lg:overflow-visible lg:p-0">
           {ITEMS.map((item) => {
             const Icon = item.icon
             const content = (
@@ -45,7 +45,7 @@ export function AccountLayout({ children }: { children: React.ReactNode }) {
                   <Link
                     to={item.to}
                     aria-current={active ? 'page' : undefined}
-                    className={cn(itemClass, active && 'md:before:absolute md:before:inset-y-0 md:before:left-0 md:before:w-1.5 md:before:bg-primary max-md:bg-primary max-md:text-primary-foreground')}
+                    className={cn(itemClass, active && 'lg:before:absolute lg:before:inset-y-0 lg:before:left-0 lg:before:w-1.5 lg:before:bg-primary max-lg:bg-primary max-lg:text-primary-foreground')}
                   >
                     {content}
                   </Link>
@@ -69,7 +69,7 @@ export function AccountLayout({ children }: { children: React.ReactNode }) {
               </li>
             )
           })}
-          <li className="md:mt-1 md:border-t md:border-border md:pt-1">
+          <li className="lg:mt-1 lg:border-t lg:border-border lg:pt-1">
             <button type="button" className={cn(itemClass, 'w-full font-bold')} onClick={() => void logout()}>
               <LogOut className="size-[18px]" aria-hidden />
               Sair

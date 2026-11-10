@@ -246,7 +246,7 @@ export function PaymentPage({ userId }: { userId: string }) {
   let body: React.ReactNode
   if (wallets.isPending || cart.isPending) {
     body = (
-      <div className="mt-10 grid gap-8 md:grid-cols-[1fr_294px]" aria-busy="true" aria-label="Carregando pagamento">
+      <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_294px]" aria-busy="true" aria-label="Carregando pagamento">
         <div className="skeleton h-[420px] rounded-md" />
         <div className="skeleton h-[420px] rounded-md" />
       </div>
@@ -291,7 +291,7 @@ export function PaymentPage({ userId }: { userId: string }) {
           </Button>
         </div>
       ) : (
-        <div className="mt-4 grid gap-8 md:grid-cols-[1fr_294px] md:gap-6 lg:gap-6">
+        <div className="mt-4 grid gap-8 lg:grid-cols-[1fr_294px] lg:gap-6">
           <section aria-labelledby="perfil-colecionador" className="flex flex-col gap-6">
             <WalletList wallets={wallets.data ?? []} slot={slot} onSelect={selectSlot} />
             <div ref={formRef} className="hidden flex-col gap-4 md:flex [&_label]:text-sm">

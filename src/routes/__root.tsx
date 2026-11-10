@@ -26,8 +26,9 @@ function useSessionExpiryRedirect() {
   )
 }
 
-// Telas de conta não têm rodapé no Figma.
+// Telas de conta não têm rodapé no Figma; a confirmação de pedido não tem cabeçalho nem rodapé.
 const NO_FOOTER = ['/perfil', '/carteiras']
+const isReceipt = (pathname: string) => pathname.startsWith('/pedido/')
 
 function Layout() {
   useSessionExpiryRedirect()
@@ -38,11 +39,11 @@ function Layout() {
         Pular para o conteúdo
       </a>
       <div className="mx-auto max-w-[1200px] px-4 pt-6 pb-24 md:px-6 md:pb-6 xl:px-0">
-        <Header />
+        {!isReceipt(pathname) && <Header />}
         <main id="conteudo" tabIndex={-1} className="outline-none">
           <Outlet />
         </main>
-        {!NO_FOOTER.includes(pathname) && <Footer />}
+        {!NO_FOOTER.includes(pathname) && !isReceipt(pathname) && <Footer />}
       </div>
       <MobileNav />
       <Toaster

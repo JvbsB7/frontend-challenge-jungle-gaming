@@ -91,10 +91,10 @@ export function Header() {
     // Figma: a divisória só aparece fora do fluxo de Mercado.
     <header className={cn('hidden md:block', !market && 'border-b border-foreground/20')}>
       <div className="flex items-start justify-between gap-4">
-        <Link to="/" className="w-40 pt-2 text-sm font-bold tracking-[1.4px]" aria-label="KURIO — página inicial">
+        <Link to="/" className="pt-2 text-sm font-bold tracking-[1.4px] lg:w-40" aria-label="KURIO — página inicial">
           KURIO
         </Link>
-        <nav aria-label="Principal" className="flex gap-6 lg:gap-10">
+        <nav aria-label="Principal" className="flex gap-5 lg:gap-10">
           <NavItem label="Início" to="/" active={!market} />
           <Link
             to="/"
@@ -110,7 +110,7 @@ export function Header() {
           <NavItem label="Criadores" />
           <NavItem label="Aprenda" />
         </nav>
-        <div className="flex items-center gap-4 lg:gap-7">
+        <div className="flex items-center gap-2 lg:gap-7">
           <HeaderSearch />
           <Link to="/carrinho" className="relative grid size-9 place-items-center rounded-md hover:bg-surface" aria-label={`Carrinho, ${count} ${count === 1 ? 'item' : 'itens'}`}>
             <ShoppingCart className="size-6" aria-hidden />
@@ -122,15 +122,16 @@ export function Header() {
           </Link>
           {session ? (
             <div className="flex items-center gap-2">
-              <Button asChild size="sm" variant="ghost">
-                <Link to="/perfil">
+              {/* Tablet: só ícones (rótulo para leitores de tela), para caber em 768px. */}
+              <Button asChild size="sm" variant="ghost" className="max-lg:px-2">
+                <Link to="/perfil" aria-label="Perfil">
                   <UserRound data-icon="inline-start" aria-hidden />
-                  Perfil
+                  <span className="max-lg:hidden">Perfil</span>
                 </Link>
               </Button>
-              <Button size="sm" variant="outline" onClick={() => void logout()}>
+              <Button size="sm" variant="outline" className="max-lg:px-2" aria-label="Sair" onClick={() => void logout()}>
                 <LogOut data-icon="inline-start" aria-hidden />
-                Sair
+                <span className="max-lg:hidden">Sair</span>
               </Button>
             </div>
           ) : (

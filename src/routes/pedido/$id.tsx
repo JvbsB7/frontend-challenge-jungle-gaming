@@ -47,7 +47,7 @@ function ThankYouIcon() {
 function Shell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate()
   return (
-    <div className="fixed inset-0 z-40 overflow-y-auto bg-background px-4 py-10 md:py-[166px]">
+    <div className="py-6 md:py-[142px]">
       <section aria-labelledby="pedido-titulo" className="relative mx-auto w-full max-w-[578px] overflow-hidden bg-card pb-12 after:absolute after:inset-x-0 after:bottom-0 after:h-2.5 after:bg-primary">
         <button
           type="button"
@@ -94,7 +94,7 @@ function Receipt({ order }: { order: Order }) {
               <th scope="col" className="pb-2 font-bold">
                 NFTs
               </th>
-              <th scope="col" className="pb-2 text-center font-bold">
+              <th scope="col" className="pb-2 text-center font-bold max-sm:sr-only">
                 Edições
               </th>
               <th scope="col" className="pb-2 text-right font-bold">
@@ -111,11 +111,12 @@ function Receipt({ order }: { order: Order }) {
                     <div>
                       <p className="font-bold">{i.name}</p>
                       <p className="text-xs text-subtle">ID do token: {i.tokenId}</p>
+                      <p className="text-xs text-muted-foreground sm:hidden">(x {i.quantity})</p>
                     </div>
                   </div>
                 </td>
-                <td className="text-center text-muted-foreground">(x {i.quantity})</td>
-                <td className="text-right font-bold whitespace-nowrap text-brand">{i.lineTotal} ETH</td>
+                <td className="text-center text-muted-foreground max-sm:hidden">(x {i.quantity})</td>
+                <td className="pl-2 text-right font-bold whitespace-nowrap text-brand">{i.lineTotal} ETH</td>
               </tr>
             ))}
           </tbody>

@@ -130,3 +130,14 @@ test('ações do card no hover (desktop): adicionar ao carrinho e ver detalhes',
   await card.getByRole('link', { name: 'Ver detalhes de Emerald Ape #042' }).click()
   await expect(page).toHaveURL(/\/nft\/nft-001/)
 })
+
+test('trocar de página leva ao topo da lista nova', async ({ page }) => {
+  await open(page)
+  const pagination = page.getByRole('navigation', { name: 'Paginação' })
+  await pagination.scrollIntoViewIfNeeded()
+  const page1 = await names(page)
+  await pagination.getByRole('button', { name: 'Página 3' }).click()
+  await expect.poll(() => names(page)).not.toEqual(page1)
+  await expect(cards(page).first()).toBeInViewport()
+  await expect(page.getByRole('heading', { name: 'Resultados' })).toBeFocused()
+})
