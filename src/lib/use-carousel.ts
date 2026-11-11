@@ -5,19 +5,17 @@ const SWIPE_MIN_PX = 40
 
 /**
  * Carrossel com troca automática, pausa e gesto de arrastar.
- * - Troca sozinho a cada `intervalMs`; pausa com mouse em cima, foco do teclado ou botão
- *   (WCAG 2.2.2: conteúdo que se move precisa poder ser pausado).
+ * - Troca sozinho a cada `intervalMs`; pausa com o mouse em cima ou o foco do teclado dentro.
  * - Com `prefers-reduced-motion`, não troca sozinho.
  * - Arrastar (dedo ou mouse) para os lados troca de slide; o clique que encerra o arraste
  *   é descartado para não abrir o link da imagem.
  */
 export function useCarousel(count: number, intervalMs = 6000) {
   const [rawIndex, setIndex] = useState(0)
-  const [userPaused, setUserPaused] = useState(false)
   const [interacting, setInteracting] = useState(false)
   const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
   const canAutoplay = count > 1 && !reduceMotion
-  const playing = canAutoplay && !userPaused && !interacting
+  const playing = canAutoplay && !interacting
   const index = count ? rawIndex % count : 0
 
   useEffect(() => {
@@ -77,8 +75,6 @@ export function useCarousel(count: number, intervalMs = 6000) {
     go,
     playing,
     canAutoplay,
-    userPaused,
-    togglePause: () => setUserPaused((p) => !p),
     swipeHandlers,
     pauseHandlers,
   }

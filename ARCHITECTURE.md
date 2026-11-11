@@ -243,7 +243,7 @@ O Figma foi seguido como fonte visual (desktop 1440 e mobile 414). Desvios e com
 
 **Ajustes de comportamento**
 - Ações de hover nos cards (desktop): o carrinho adiciona 1 unidade da edição 1/50, a do preço exibido.
-- **Carrossel do hero ("Bem-vindo à Kurio")** (`lib/use-carousel.ts`): troca sozinho a cada 6 s; arrastar com o dedo ou o mouse troca de destaque, e o clique que encerra o arraste não abre o NFT. Para cumprir a WCAG 2.2.2, pausa com mouse em cima ou foco do teclado e ganhou um **botão de pausar/continuar** ao lado das bolinhas (não está no Figma). Com `prefers-reduced-motion`, não troca sozinho. No mobile, a miniatura sobreposta mostra o próximo destaque. A troca só é anunciada a leitores de tela quando não é automática.
+- **Carrossel do hero ("Bem-vindo à Kurio")** (`lib/use-carousel.ts`): troca sozinho a cada 6 s; arrastar com o dedo ou o mouse troca de destaque, e o clique que encerra o arraste não abre o NFT. Pausa enquanto o mouse está em cima ou o foco do teclado está dentro dele; com `prefers-reduced-motion`, não troca sozinho. Não há botão de pausar visível, para manter o layout do Figma: a pausa por mouse/foco atende parcialmente a WCAG 2.2.2 (um botão dedicado seria o ideal). No mobile, a miniatura sobreposta mostra o próximo destaque. A troca só é anunciada a leitores de tela quando não é automática.
 - Ao trocar de página, a tela volta ao topo da lista. A paginação é compacta (com "…") e centralizada no mobile.
 - Toasts abaixo do cabeçalho, para não cobrir voltar e favoritar no mobile.
 - Login e Cadastro no desktop: modal sobre a Início, como no Figma; fechar sem entrar volta à página anterior.

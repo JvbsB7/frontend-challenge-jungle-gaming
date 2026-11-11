@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { ArrowRight, Pause, Play } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from 'cn'
 import type { NftSummary } from '@/api/contracts'
@@ -16,11 +16,9 @@ interface DotsProps {
   active: number
   onSelect: (i: number) => void
   label: string
-  /** Botão de pausar/continuar a troca automática (WCAG 2.2.2). */
-  pause?: { paused: boolean; onToggle: () => void }
 }
 
-function Dots({ count, active, onSelect, label, pause }: DotsProps) {
+function Dots({ count, active, onSelect, label }: DotsProps) {
   return (
     <div role="group" aria-label={label} className="flex items-center gap-1">
       {Array.from({ length: count }, (_, i) => (
@@ -36,16 +34,6 @@ function Dots({ count, active, onSelect, label, pause }: DotsProps) {
           <span className={cn('size-2 rounded-full', i === active ? 'bg-brand' : 'bg-brand/40')} />
         </button>
       ))}
-      {pause && (
-        <button
-          type="button"
-          onClick={pause.onToggle}
-          aria-label={pause.paused ? 'Retomar troca automática dos destaques' : 'Pausar troca automática dos destaques'}
-          className="ml-1 grid size-6 place-items-center rounded-full text-brand/70 hover:text-brand focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
-        >
-          {pause.paused ? <Play className="size-3" aria-hidden /> : <Pause className="size-3" aria-hidden />}
-        </button>
-      )}
     </div>
   )
 }
@@ -64,7 +52,6 @@ export function Hero() {
         active={index}
         onSelect={carousel.go}
         label="Escolher destaque"
-        pause={carousel.canAutoplay ? { paused: carousel.userPaused, onToggle: carousel.togglePause } : undefined}
       />
     ) : null
 
