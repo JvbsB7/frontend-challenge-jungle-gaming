@@ -43,7 +43,12 @@ function Layout() {
         <main id="conteudo" tabIndex={-1} className="outline-none">
           <Outlet />
         </main>
-        {!NO_FOOTER.includes(pathname) && !isReceipt(pathname) && <Footer />}
+        {!NO_FOOTER.includes(pathname) && !isReceipt(pathname) && (
+          // Login e Cadastro no mobile são telas cheias, sem rodapé (Figma).
+          <div className={['/entrar', '/cadastro'].includes(pathname) ? 'max-md:hidden' : undefined}>
+            <Footer />
+          </div>
+        )}
       </div>
       <MobileNav />
       <Toaster

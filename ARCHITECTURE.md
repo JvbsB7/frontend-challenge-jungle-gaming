@@ -256,7 +256,7 @@ O Figma foi seguido como fonte visual (desktop 1440 e mobile 414). Desvios e com
 - Notas das fixtures são inteiras (ex.: 3,0); o Figma mostra 4,8.
 
 **Acessibilidade em relação ao layout**
-- Login e Cadastro: rótulos só para leitores de tela (o Figma usa só placeholder).
+- Login e Cadastro (conferidos com os exports desktop e mobile do Figma): rótulos só para leitores de tela (o Figma usa só placeholder). O ícone de olho em "Confirmar senha" aparece só no mobile, como no Figma.
 - Pagamento, Perfil e Carteiras usam os rótulos visíveis do Figma.
 - O alvo de toque dos pontos do carrossel é 24 px, com o ponto de 8 px desenhado.
 

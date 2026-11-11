@@ -2,10 +2,10 @@ import { Eye, EyeOff } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from 'cn'
 
-type Props = Omit<React.ComponentProps<'input'>, 'type'>
+type Props = Omit<React.ComponentProps<'input'>, 'type'> & { toggleClassName?: string }
 
 /** Campo de senha com botão mostrar/ocultar (Figma: ícone "Hide"). */
-export function PasswordInput({ className, ...props }: Props) {
+export function PasswordInput({ className, toggleClassName, ...props }: Props) {
   const [visible, setVisible] = useState(false)
   return (
     <div className="relative">
@@ -15,7 +15,10 @@ export function PasswordInput({ className, ...props }: Props) {
         onClick={() => setVisible((v) => !v)}
         aria-label="Mostrar senha"
         aria-pressed={visible}
-        className="absolute top-1/2 right-2 grid size-9 -translate-y-1/2 place-items-center rounded text-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+        className={cn(
+          "absolute top-1/2 right-2 grid size-9 -translate-y-1/2 place-items-center rounded text-subtle hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+          toggleClassName,
+        )}
       >
         {visible ? <Eye className="size-5" aria-hidden /> : <EyeOff className="size-5" aria-hidden />}
       </button>

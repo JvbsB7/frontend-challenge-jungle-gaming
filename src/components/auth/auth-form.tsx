@@ -33,7 +33,7 @@ const COPY: Record<AuthMode, { mobileTitle: string; subtitle: string; submit: st
 
 // Figma: campos sem rótulo visível (só placeholder). O rótulo existe para leitores de tela.
 const fieldClass =
-  'h-10 w-full rounded-[3px] border border-input bg-transparent px-4 text-sm outline-none placeholder:text-subtle focus-visible:border-primary aria-invalid:border-destructive max-md:h-[50px] max-md:rounded-[10px] max-md:border-transparent max-md:bg-card max-md:focus-visible:border-primary max-md:aria-invalid:border-destructive'
+  'h-10 w-full rounded-[3px] border border-input bg-transparent px-4 text-sm outline-none placeholder:text-subtle focus-visible:border-primary aria-invalid:border-destructive max-md:h-[50px] max-md:rounded-[10px]'
 
 function validate(mode: AuthMode, values: Record<string, string>): FieldErrors {
   const errors: FieldErrors = {
@@ -61,7 +61,7 @@ function SocialButtons() {
           key={p.name}
           type="button"
           onClick={() => unavailable(p.name)}
-          className="flex h-10 w-full items-center justify-center gap-2 rounded-[3px] border border-input text-[13px] focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none hover:bg-surface max-md:h-[50px] max-md:rounded-[10px] max-md:border-transparent max-md:bg-card"
+          className="flex h-10 w-full items-center justify-center gap-2 rounded-[3px] border border-input text-[13px] text-muted-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none hover:bg-surface max-md:rounded-[4px]"
         >
           {p.icon}
           Continuar com {p.name}
@@ -116,9 +116,9 @@ export function AuthForm({ mode, redirect }: { mode: AuthMode; redirect?: string
   })
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col max-md:px-3">
       {/* Mobile: logotipo + título (Figma "Mobile / Login|Cadastro") */}
-      <div className="flex flex-col items-center gap-10 pt-14 pb-10 md:hidden">
+      <div className="flex flex-col items-center gap-[88px] pt-24 pb-9 md:hidden">
         <p className="text-4xl font-bold tracking-[3px]" aria-hidden>
           KURIO
         </p>
@@ -182,7 +182,9 @@ export function AuthForm({ mode, redirect }: { mode: AuthMode; redirect?: string
         </FormField>
         {mode === 'register' && (
           <FormField name="confirm" label="Confirmar senha" error={errors.confirm} hideLabel className="gap-1">
-            {(p) => <input {...p} {...bind('confirm')} type="password" autoComplete="new-password" placeholder="Confirmar senha" className={fieldClass} />}
+            {(p) => (
+              <PasswordInput {...p} {...bind('confirm')} autoComplete="new-password" placeholder="Confirmar senha" className={fieldClass} toggleClassName="md:hidden" />
+            )}
           </FormField>
         )}
         {mode === 'login' && (
@@ -193,7 +195,7 @@ export function AuthForm({ mode, redirect }: { mode: AuthMode; redirect?: string
         <Button
           type="submit"
           disabled={submit.isPending}
-          className="mt-4 h-[45px] w-full rounded-[3px] text-base max-md:mt-6 max-md:h-[60px] max-md:rounded-full max-md:bg-gradient-to-r max-md:from-primary max-md:to-primary/80"
+          className="mt-4 h-[45px] w-full rounded-[3px] text-base max-md:mt-7 max-md:h-[60px] max-md:rounded-[10px]"
         >
           <span className="max-md:hidden">{submit.isPending ? copy.pending : copy.submit}</span>
           <span className="md:hidden">{submit.isPending ? copy.pending : copy.mobileSubmit}</span>
@@ -202,7 +204,7 @@ export function AuthForm({ mode, redirect }: { mode: AuthMode; redirect?: string
 
       <div className="mt-8 flex flex-col gap-5 md:mt-4 md:gap-3">
         {/* Linha de largura total com o texto por cima (Figma). */}
-        <p className="relative text-center text-[13px] before:absolute before:inset-x-0 before:top-1/2 before:h-px before:bg-input max-md:before:inset-x-4">
+        <p className="relative text-center text-[13px] before:absolute before:inset-x-0 before:top-1/2 before:h-px before:bg-input">
           <span className="relative bg-background px-2 md:bg-card">Ou continue com</span>
         </p>
         <div className="md:px-20">
@@ -210,9 +212,9 @@ export function AuthForm({ mode, redirect }: { mode: AuthMode; redirect?: string
         </div>
       </div>
 
-      <p className="mt-10 text-center text-sm md:hidden">
+      <p className="mt-8 text-center text-sm text-muted-foreground md:hidden">
         {mode === 'login' ? 'Novo na Kurio? ' : 'Já tem uma conta? '}
-        <Link to={mode === 'login' ? '/cadastro' : '/entrar'} search={{ redirect }} replace className="font-bold text-brand hover:underline">
+        <Link to={mode === 'login' ? '/cadastro' : '/entrar'} search={{ redirect }} replace className="underline-offset-4 hover:underline">
           {mode === 'login' ? 'Crie uma conta' : 'Entre'}
         </Link>
       </p>
