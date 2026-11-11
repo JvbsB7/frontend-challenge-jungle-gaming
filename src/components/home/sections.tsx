@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { ArrowRight } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowRight, Pause, Play } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from 'cn'
 import type { NftSummary } from '@/api/contracts'
@@ -9,11 +8,21 @@ import { q } from '@/api/queries'
 import promoMask from '@/assets/decor/promo-mask.svg'
 import { Button } from '@/components/ui/button'
 import { nftSrcSet } from '@/lib/images'
+import { useCarousel } from '@/lib/use-carousel'
 import { HeroMobileMask } from './hero-mobile-mask'
 
-function Dots({ count, active, onSelect, label }: { count: number; active: number; onSelect: (i: number) => void; label: string }) {
+interface DotsProps {
+  count: number
+  active: number
+  onSelect: (i: number) => void
+  label: string
+  /** Botão de pausar/continuar a troca automática (WCAG 2.2.2). */
+  pause?: { paused: boolean; onToggle: () => void }
+}
+
+function Dots({ count, active, onSelect, label, pause }: DotsProps) {
   return (
-    <div role="group" aria-label={label} className="flex gap-1">
+    <div role="group" aria-label={label} className="flex items-center gap-1">
       {Array.from({ length: count }, (_, i) => (
         <button
           key={i}
@@ -27,20 +36,47 @@ function Dots({ count, active, onSelect, label }: { count: number; active: numbe
           <span className={cn('size-2 rounded-full', i === active ? 'bg-brand' : 'bg-brand/40')} />
         </button>
       ))}
+      {pause && (
+        <button
+          type="button"
+          onClick={pause.onToggle}
+          aria-label={pause.paused ? 'Retomar troca automática dos destaques' : 'Pausar troca automática dos destaques'}
+          className="ml-1 grid size-6 place-items-center rounded-full text-brand/70 hover:text-brand focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+        >
+          {pause.paused ? <Play className="size-3" aria-hidden /> : <Pause className="size-3" aria-hidden />}
+        </button>
+      )}
     </div>
   )
 }
 
 export function Hero() {
   const { data } = useQuery(q.featured())
-  const [index, setIndex] = useState(0)
   const slides = data?.hero ?? []
+  const carousel = useCarousel(slides.length)
+  const { index } = carousel
   const current: NftSummary | undefined = slides[index]
+  const nextSlide = slides.length > 1 ? slides[(index + 1) % slides.length] : undefined
+  const dots =
+    slides.length > 1 ? (
+      <Dots
+        count={slides.length}
+        active={index}
+        onSelect={carousel.go}
+        label="Escolher destaque"
+        pause={carousel.canAutoplay ? { paused: carousel.userPaused, onToggle: carousel.togglePause } : undefined}
+      />
+    ) : null
 
   return (
     <>
       {/* Desktop/tablet */}
-      <section aria-label="Destaques" className="hidden min-h-[450px] items-center justify-between gap-10 py-8 md:mt-8 md:flex lg:pl-10">
+      <section
+        aria-label="Destaques"
+        aria-roledescription="carrossel"
+        {...carousel.pauseHandlers}
+        className="hidden min-h-[450px] items-center justify-between gap-10 py-8 md:mt-8 md:flex lg:pl-10"
+      >
         <div className="flex max-w-[600px] flex-col items-end gap-11">
           <div className="flex w-full flex-col gap-8">
             <div className="flex flex-col gap-1">
@@ -61,12 +97,14 @@ export function Hero() {
               </Link>
             </Button>
           </div>
-          {slides.length > 1 && <Dots count={slides.length} active={index} onSelect={setIndex} label="Escolher destaque" />}
+          {dots}
         </div>
-        <div className="size-[300px] shrink-0 lg:size-[450px]">
+        {/* Arrastar a imagem para os lados troca o destaque; anuncia a troca só quando não é automática. */}
+        <div className="size-[300px] shrink-0 select-none lg:size-[450px]" aria-live={carousel.playing ? 'off' : 'polite'} {...carousel.swipeHandlers}>
           {current ? (
             <Link to="/nft/$id" params={{ id: current.id }} className="block rounded-3xl focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none">
               <img
+                key={current.id}
                 src={current.image}
                 srcSet={nftSrcSet(current.image)}
                 sizes="(min-width: 1024px) 450px, 300px"
@@ -74,7 +112,8 @@ export function Hero() {
                 width={450}
                 height={450}
                 fetchPriority="high"
-                className="size-full rounded-3xl object-cover"
+                draggable={false}
+                className="size-full rounded-3xl object-cover motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500"
               />
             </Link>
           ) : (
@@ -84,7 +123,13 @@ export function Hero() {
       </section>
 
       {/* Mobile */}
-      <section aria-label="Destaques" className="relative mt-4 overflow-hidden rounded-[30px] p-4 md:hidden">
+      <section
+        aria-label="Destaques"
+        aria-roledescription="carrossel"
+        {...carousel.pauseHandlers}
+        {...carousel.swipeHandlers}
+        className="relative mt-4 overflow-hidden rounded-[30px] p-4 select-none md:hidden"
+      >
         <HeroMobileMask />
         <div className="relative flex flex-col items-center gap-4">
           <div className="flex w-full items-center gap-2">
@@ -102,15 +147,25 @@ export function Hero() {
             </div>
             <div className="relative size-[138px] shrink-0">
               {current ? (
-                <Link to="/nft/$id" params={{ id: current.id }} className="block">
-                  <img src={current.image.replace('.webp', '-500.webp')} alt={`${current.name} — ver detalhes`} width={138} height={138} className="size-[138px] rounded-2xl object-cover" />
+                <Link to="/nft/$id" params={{ id: current.id }} className="block" aria-live={carousel.playing ? 'off' : 'polite'}>
+                  <img
+                    key={current.id}
+                    src={current.image.replace('.webp', '-500.webp')}
+                    alt={`${current.name} — ver detalhes`}
+                    width={138}
+                    height={138}
+                    draggable={false}
+                    className="size-[138px] rounded-2xl object-cover motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500"
+                  />
                 </Link>
               ) : (
                 <div className="skeleton size-[138px] rounded-2xl" aria-hidden />
               )}
-              {slides[1] && (
+              {nextSlide && (
                 <img
-                  src={slides[1].image.replace('.webp', '-500.webp')}
+                  key={nextSlide.id}
+                  draggable={false}
+                  src={nextSlide.image.replace('.webp', '-500.webp')}
                   alt=""
                   aria-hidden
                   width={58}
@@ -120,7 +175,7 @@ export function Hero() {
               )}
             </div>
           </div>
-          {slides.length > 1 && <Dots count={slides.length} active={index} onSelect={setIndex} label="Escolher destaque" />}
+          {dots}
         </div>
       </section>
     </>

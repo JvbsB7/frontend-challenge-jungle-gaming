@@ -35,7 +35,8 @@ export default defineConfig({
     { name: 'desktop', testDir: 'tests/e2e', use: desktop },
     { name: 'mobile', testDir: 'tests/e2e', use: mobile },
     // Regressão visual das telas principais.
-    { name: 'visual-desktop', testDir: 'tests/visual', use: desktop },
-    { name: 'visual-mobile', testDir: 'tests/visual', use: mobile },
+    // reducedMotion: o carrossel do hero não troca sozinho durante a captura (baseline estável).
+    { name: 'visual-desktop', testDir: 'tests/visual', use: { ...desktop, reducedMotion: 'reduce' } },
+    { name: 'visual-mobile', testDir: 'tests/visual', use: { ...mobile, reducedMotion: 'reduce' } },
   ],
 })
