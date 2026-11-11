@@ -250,7 +250,8 @@ export function PaymentPage({ userId }: { userId: string }) {
     ) : null
 
   let body: React.ReactNode
-  if (wallets.isPending || cart.isPending) {
+  // O perfil também é esperado: o nome de usuário do comprador vem dele (sem isso, confirmar cedo dá "dados incompletos").
+  if (wallets.isPending || cart.isPending || profile.isPending) {
     body = (
       <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_294px]" aria-busy="true" aria-label="Carregando pagamento">
         <div className="skeleton h-[420px] rounded-md" />

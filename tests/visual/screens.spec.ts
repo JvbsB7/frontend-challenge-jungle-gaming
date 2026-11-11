@@ -15,6 +15,8 @@ async function settle(page: Page) {
   await page.addStyleTag({ content: HIDE_TRANSIENT })
   await page.evaluate(() => document.fonts.ready)
   await page.waitForFunction(() => [...document.images].every((img) => img.loading === 'lazy' || (img.complete && img.naturalWidth > 0)))
+  // Imagens carregadas e decodificadas: senão a captura pode pegar uma imagem ainda sendo pintada.
+  await page.evaluate(() => Promise.all([...document.images].filter((img) => img.complete && img.naturalWidth > 0).map((img) => img.decode().catch(() => undefined))))
   await page.waitForLoadState('networkidle')
 }
 

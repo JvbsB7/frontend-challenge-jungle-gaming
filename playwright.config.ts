@@ -13,10 +13,13 @@ export default defineConfig({
   expect: {
     timeout: 10_000,
     // Regressão visual: tolera só antialiasing de fonte.
-    toHaveScreenshot: { maxDiffPixels: 50, animations: 'disabled', caret: 'hide' },
+    toHaveScreenshot: { maxDiffPixels: 50, animations: 'disabled', caret: 'hide', timeout: 20_000 },
   },
   // Uma nova tentativa no CI para lentidão pontual do dev server (falhas reais repetem).
   retries: process.env.CI ? 1 : 0,
+  // Até 4 navegadores em paralelo: com mais, o dev server do Vite (sobretudo a frio) sobrecarrega
+  // a máquina e as esperas estouram. Ajustável com --workers.
+  workers: process.env.CI ? 2 : 4,
   // Baselines versionadas, separadas por projeto (desktop/mobile) e sem sufixo de SO.
   snapshotPathTemplate: '{testDir}/__screenshots__/{projectName}/{arg}{ext}',
   webServer: BASE_URL
