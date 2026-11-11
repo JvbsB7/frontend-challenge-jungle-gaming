@@ -1,14 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { AlertTriangle } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { ApiError } from '@/api/client'
 import type { CreateOrderInput, Order, Quote } from '@/api/contracts'
 import { api } from '@/api/endpoints'
 import { keys, q } from '@/api/queries'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from '@/components/ui/dialog'
-import { clearAttempt, idempotencyKeyFor, pendingOrder, shortAddress } from '@/lib/checkout'
+import { checkoutDraft, clearAttempt, idempotencyKeyFor, pendingOrder, shortAddress } from '@/lib/checkout'
 import { NETWORK_LABEL, PROVIDER_LABEL } from '@/lib/labels'
 
 interface Props {
@@ -21,7 +21,7 @@ interface Props {
   onFieldErrors: (fields: Record<string, string>) => void
 }
 
-type SubmitProblem = { kind: 'outdated' | 'stock' | 'retry' | 'error'; message: string }
+type SubmitProblem = { kind: 'outdated' | 'stock' | 'retry' | 'pending' | 'error'; message: string; orderId?: string }
 
 export function ReviewDialog({ open, onOpenChange, userId, input, onFieldErrors }: Props) {
   const client = useQueryClient()
@@ -34,6 +34,16 @@ export function ReviewDialog({ open, onOpenChange, userId, input, onFieldErrors 
   const [problem, setProblem] = useState<SubmitProblem>()
   // Cotação do último envio: "Tentar novamente" reenvia exatamente o mesmo pedido (mesma chave).
   const [lastSubmitted, setLastSubmitted] = useState<string>()
+  // Erros de campo da API: aplicados quando o diálogo termina de fechar (o Radix devolve o foco antes).
+  const pendingFieldErrors = useRef<Record<string, string>>(undefined)
+
+  /** Único caminho de fechamento: sempre limpa o estado da revisão (Voltar, Esc, erro de campo, sucesso). */
+  const close = () => {
+    setAcknowledged(undefined)
+    setProblem(undefined)
+    setLastSubmitted(undefined)
+    onOpenChange(false)
+  }
   const live = quote.data
   // Ao abrir, a primeira cotação exibida vira a "revisada" (ajuste de estado durante o render).
   if (open && live && acknowledged === undefined && !problem) setAcknowledged(live.quoteId)
@@ -47,8 +57,9 @@ export function ReviewDialog({ open, onOpenChange, userId, input, onFieldErrors 
     onSuccess: (order: Order) => {
       pendingOrder.set(userId, order.id)
       clearAttempt(userId)
+      checkoutDraft.set(userId, undefined) // próximo checkout parte da carteira atual
       client.setQueryData(keys.order(userId, order.id), order)
-      onOpenChange(false)
+      close()
       void navigate({ to: '/pedido/$id', params: { id: order.id } })
     },
     onError: (error) => {
@@ -61,8 +72,14 @@ export function ReviewDialog({ open, onOpenChange, userId, input, onFieldErrors 
         return setProblem({ kind: error.code === 'OUT_OF_STOCK' ? 'stock' : 'outdated', message: error.message })
       }
       if (error.code === 'VALIDATION' && error.fields) {
-        onOpenChange(false)
-        return onFieldErrors(error.fields)
+        pendingFieldErrors.current = error.fields
+        return close()
+      }
+      // Outro pedido do usuário ainda está em processamento (ex.: enviado em outra aba).
+      if (error.code === 'CONFLICT') {
+        const orderId = (error.details as { orderId?: string } | undefined)?.orderId
+        if (orderId) pendingOrder.set(userId, orderId)
+        return setProblem({ kind: 'pending', message: error.message, orderId })
       }
       // Timeout/queda: o pedido pode ter sido criado. Reenviar usa a mesma chave e recupera o mesmo pedido.
       if (error.transient) {
@@ -98,15 +115,21 @@ export function ReviewDialog({ open, onOpenChange, userId, input, onFieldErrors 
       open={open}
       onOpenChange={(next) => {
         if (submit.isPending) return // não fecha no meio do envio
-        if (!next) {
-          setAcknowledged(undefined)
-          setProblem(undefined)
-          setLastSubmitted(undefined)
-        }
-        onOpenChange(next)
+        if (next) onOpenChange(true)
+        else close()
       }}
     >
-      <DialogContent className="max-h-[90vh] overflow-y-auto bg-card sm:max-w-[520px]">
+      <DialogContent
+        className="max-h-[90vh] overflow-y-auto bg-card sm:max-w-[520px]"
+        onCloseAutoFocus={(e) => {
+          // Com erro de campo, o foco vai para o primeiro campo inválido, e não de volta ao botão.
+          const fields = pendingFieldErrors.current
+          if (!fields) return
+          e.preventDefault()
+          pendingFieldErrors.current = undefined
+          onFieldErrors(fields)
+        }}
+      >
         <DialogTitle>Revise seu pedido</DialogTitle>
         <DialogDescription>Confira os itens, a carteira e os valores antes de confirmar.</DialogDescription>
 
@@ -115,6 +138,11 @@ export function ReviewDialog({ open, onOpenChange, userId, input, onFieldErrors 
             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
             <div className="flex flex-col gap-1">
               <p>{problem?.message ?? 'Os valores mudaram desde a sua revisão. Confira e confirme novamente.'}</p>
+              {problem?.kind === 'pending' && problem.orderId && (
+                <Link to="/pedido/$id" params={{ id: problem.orderId }} className="font-bold text-brand underline">
+                  Acompanhar pedido
+                </Link>
+              )}
               {(problem?.kind === 'stock' || blockedByStock) && (
                 <Link to="/carrinho" className="font-bold text-brand underline">
                   Ajustar carrinho
@@ -159,11 +187,11 @@ export function ReviewDialog({ open, onOpenChange, userId, input, onFieldErrors 
         )}
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" disabled={submit.isPending} onClick={() => onOpenChange(false)}>
+          <Button variant="outline" disabled={submit.isPending} onClick={close}>
             Voltar
           </Button>
           <Button
-            disabled={submit.isPending || (!retrying && (!live || quote.isFetching || blockedByStock || problem?.kind === 'stock'))}
+            disabled={submit.isPending || (!retrying && (!live || quote.isFetching || blockedByStock || problem?.kind === 'stock' || problem?.kind === 'pending'))}
             onClick={confirm}
           >
             {submit.isPending ? 'Enviando pedido…' : retrying ? 'Tentar novamente' : needsReconfirm ? 'Confirmar novos valores' : 'Confirmar e pagar'}

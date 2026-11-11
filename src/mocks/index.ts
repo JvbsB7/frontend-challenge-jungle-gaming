@@ -1,5 +1,5 @@
 import { network } from 'virtual:msw'
-import { initDb, resetDb } from './db'
+import { initDb, resetDb, syncFromStorage } from './db'
 import { expireAllSessions, settleDueOrders, updateEdition } from './domain'
 import { httpHandlers } from './http'
 import { connectionCount, dropConnections, realtimeHandler, replayEvent } from './realtime'
@@ -47,6 +47,9 @@ export async function enableMocks(): Promise<void> {
   })
   await network.enable()
   // Liquida pedidos pendentes mesmo sem requisições (emite order.updated).
-  setInterval(() => settleDueOrders(), 500)
+  setInterval(() => {
+    syncFromStorage()
+    settleDueOrders()
+  }, 500)
   window.__kurio = controls
 }

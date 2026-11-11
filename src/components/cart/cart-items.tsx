@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { AlertTriangle, Minus, Plus, Trash2 } from 'lucide-react'
+import { useRef } from 'react'
 import { toast } from 'sonner'
 import { cn } from 'cn'
 import type { CartItem } from '@/api/contracts'
@@ -72,20 +73,27 @@ function Issue({ item, notice, onDismiss }: { item: CartItem; notice?: LineNotic
 export function CartLine({ item, notice, onDismiss }: { item: CartItem; notice?: LineNotice; onDismiss: () => void }) {
   const remove = useRemoveFromCart()
   const add = useAddToCart()
-  const onRemove = () =>
+  const liRef = useRef<HTMLLIElement>(null)
+  const onRemove = () => {
+    // O botão focado some com a linha: o foco vai para o próximo item (ou anterior, ou a lista).
+    const sibling = (liRef.current?.nextElementSibling ?? liRef.current?.previousElementSibling) as HTMLElement | null
+    const target = sibling?.querySelector<HTMLElement>('button[aria-label^="Remover"]') ?? document.querySelector<HTMLElement>('#itens-carrinho')
     remove.mutate(
       { nftId: item.nftId, editionId: item.editionId },
       {
-        onSuccess: () =>
+        onSuccess: () => {
+          requestAnimationFrame(() => target?.focus())
           toast.success(`${item.name} removido do carrinho.`, {
             action: { label: 'Desfazer', onClick: () => add.mutate({ nftId: item.nftId, editionId: item.editionId, quantity: item.quantity }) },
-          }),
+          })
+        },
       },
     )
+  }
   const unavailable = item.quantity > item.available
 
   return (
-    <li className={cn('overflow-hidden rounded-2xl bg-card md:rounded-none', unavailable && 'ring-1 ring-destructive/60')}>
+    <li ref={liRef} className={cn('overflow-hidden rounded-2xl bg-card md:rounded-none', unavailable && 'ring-1 ring-destructive/60')}>
       <div className="grid grid-cols-[100px_1fr] items-center gap-x-3 md:min-h-[70px] md:grid-cols-[minmax(0,250px)_92px_80px_100px_24px] md:justify-between md:pr-6">
         <div className="contents md:flex md:items-center md:gap-4">
           <img

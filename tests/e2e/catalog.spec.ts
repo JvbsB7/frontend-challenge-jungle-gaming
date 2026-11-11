@@ -46,7 +46,7 @@ test('filtros combinados, ordenação e paginação compõem a URL e voltam pelo
   await expect(page).toHaveURL(/page=2/)
   await expect.poll(() => names(page)).not.toEqual(page1)
   const page2 = await names(page)
-  await page.getByRole('tab', { name: 'Em alta' }).click()
+  await page.getByRole('button', { name: 'Em alta', exact: true }).click()
   await expect(page).not.toHaveURL(/page=2/)
 
   await page.goBack()
@@ -95,7 +95,7 @@ test('respostas fora de ordem não sobrescrevem o filtro atual', async ({ page }
   await page.goto('/?mockReset=1&scenario=jitter')
   await expect(cards(page).first()).toBeVisible({ timeout: 15_000 })
   for (const tab of ['Novos lançamentos', 'Em alta', 'Todos os NFTs', 'Em alta']) {
-    await page.getByRole('tab', { name: tab }).click()
+    await page.getByRole('button', { name: tab, exact: true }).click()
   }
   await expect(page).toHaveURL(/tab=trending/)
   // Resultado final precisa ser o da última aba, mesmo com latências diferentes.
@@ -140,4 +140,21 @@ test('trocar de página leva ao topo da lista nova', async ({ page }) => {
   await expect.poll(() => names(page)).not.toEqual(page1)
   await expect(cards(page).first()).toBeInViewport()
   await expect(page.getByRole('heading', { name: 'Resultados' })).toBeFocused()
+})
+
+test('evento antigo (replay) não faz o preço do catálogo regredir', async ({ page }) => {
+  await open(page)
+  await page.waitForFunction(() => (window.__kurio?.connectionCount() ?? 0) > 0)
+  await page.evaluate(() => {
+    window.__kurio!.updateEdition('nft-001', 'e50', { price: '1.25' }) // v2
+    window.__kurio!.updateEdition('nft-001', 'e50', { price: '1.30' }) // v3
+  })
+  // Página nova: o catálogo vem da REST já na v3, sem histórico de eventos no cliente.
+  await page.reload()
+  const price = cards(page).filter({ hasText: 'Emerald Ape #042' }).locator('p span.text-brand')
+  await expect(price).toHaveText('1.30 ETH')
+  await page.waitForFunction(() => (window.__kurio?.connectionCount() ?? 0) > 0)
+  await page.evaluate(() => window.__kurio!.replayEvent(1)) // reenvia o evento v2 (1.25)
+  await page.waitForTimeout(500)
+  await expect(price).toHaveText('1.30 ETH')
 })

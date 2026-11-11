@@ -96,13 +96,13 @@ export function Catalog({ search, onChange, aside }: Props) {
 
       <div className="flex min-w-0 flex-col gap-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div role="tablist" aria-label="Seções do catálogo" className="flex gap-4 overflow-x-auto md:gap-5">
+          {/* Funcionam como filtro (mudam a URL), não como abas: grupo de botões alternáveis. */}
+          <div role="group" aria-label="Seções do catálogo" className="flex gap-4 overflow-x-auto md:gap-5">
             {NFT_TABS.map((t) => (
               <button
                 key={t}
-                role="tab"
                 type="button"
-                aria-selected={tab === t}
+                aria-pressed={tab === t}
                 onClick={() => onChange({ tab: t === 'all' ? undefined : t })}
                 className={cn(
                   'shrink-0 border-b-2 pb-1 text-sm leading-4 md:text-[15px]',

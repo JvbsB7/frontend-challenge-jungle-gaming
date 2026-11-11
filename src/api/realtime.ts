@@ -31,21 +31,26 @@ function accept(event: { eventId: string; resource: { type: string; id: string }
 function applyNft(client: QueryClient, event: NftUpdatedEvent): void {
   const id = event.resource.id
   const detail = client.getQueryData<Nft>(keys.nft(id))
-  if (!accept(event, detail?.version)) return
-  // Estado anterior para avisos ("preço mudou de X para Y"): detalhe ou qualquer lista em cache.
-  const fromList = client
+  // Versão já conhecida via REST em qualquer cache (detalhe, listas, destaques): evento mais
+  // antigo que ela não pode regredir o estado.
+  const listed = client
     .getQueriesData<NftListResponse>({ queryKey: [...keys.nfts, 'list'] })
     .flatMap(([, data]) => data?.items ?? [])
-    .find((n) => n.id === id)
-  const before = detail ?? fromList
+    .filter((n) => n.id === id)
+  const featured = client.getQueryData<FeaturedResponse>(keys.featured)
+  const featuredItems = featured ? [...featured.hero, featured.spotlight].filter((n) => n.id === id) : []
+  const cachedVersion = Math.max(detail?.version ?? 0, ...listed.map((n) => n.version), ...featuredItems.map((n) => n.version))
+  if (!accept(event, cachedVersion)) return
+  // Estado anterior para avisos ("preço mudou de X para Y"): detalhe ou qualquer lista em cache.
+  const before = detail ?? listed[0]
   const patch = { ...event.data, version: event.version }
-  client.setQueryData<Nft>(keys.nft(id), (old) => (old ? { ...old, ...patch } : old))
+  client.setQueryData<Nft>(keys.nft(id), (old) => (old && old.version < patch.version ? { ...old, ...patch } : old))
   client.setQueriesData<NftListResponse>({ queryKey: [...keys.nfts, 'list'] }, (old) =>
-    old && { ...old, items: old.items.map((n) => (n.id === id ? { ...n, price: patch.price, available: patch.available, version: patch.version } : n)) },
+    old && { ...old, items: old.items.map((n) => (n.id === id && n.version < patch.version ? { ...n, price: patch.price, available: patch.available, version: patch.version } : n)) },
   )
   client.setQueryData<FeaturedResponse>(keys.featured, (old) => {
     if (!old) return old
-    const fix = <T extends { id: string }>(n: T) => (n.id === id ? { ...n, price: patch.price, available: patch.available, version: patch.version } : n)
+    const fix = <T extends { id: string; version: number }>(n: T) => (n.id === id && n.version < patch.version ? { ...n, price: patch.price, available: patch.available, version: patch.version } : n)
     return { hero: old.hero.map(fix), spotlight: fix(old.spotlight) }
   })
   // Carrinho e cotação recalculam pela API (fonte da verdade dos valores).

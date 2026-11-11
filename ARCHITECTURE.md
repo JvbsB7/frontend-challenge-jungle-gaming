@@ -115,7 +115,8 @@ No cliente, `ApiError` também representa `NETWORK`, `TIMEOUT` (10 s) e `CANCELE
 ### Cotação e idempotência do pedido
 
 - O `quoteId` é um hash de itens, quantidades, preços unitários, cupom, rede e total. `POST /orders` recalcula a cotação e **só aceita o `quoteId` atual**. Se algo mudou (preço, estoque, cupom ou taxa), responde 409 `QUOTE_OUTDATED` e devolve a cotação nova, e a UI exige nova confirmação.
-- A chave de idempotência é por usuário. Mesma chave com o mesmo corpo devolve o mesmo pedido (200). Mesma chave com outro corpo responde 409 `IDEMPOTENCY_CONFLICT`. O cliente deriva a chave do conteúdo (`lib/checkout.ts`): o reenvio após timeout reaproveita a chave, e qualquer mudança de conteúdo gera uma nova.
+- **Um pedido por vez:** enquanto houver um pedido `pending`, um novo pedido com outra chave (por exemplo, de outra aba) responde 409 `CONFLICT` com `details.orderId`, e a revisão mostra "Acompanhar pedido". Isso evita reservar e cobrar o mesmo carrinho duas vezes.
+- A chave de idempotência é por usuário. Mesma chave com o mesmo corpo devolve o mesmo pedido (200). Mesma chave com outro corpo responde 409 `IDEMPOTENCY_CONFLICT`. A comparação usa o conteúdo normalizado (independe da ordem das chaves e da caixa do cupom). O cliente deriva a chave do conteúdo (`lib/checkout.ts`): o reenvio após timeout reaproveita a chave, e qualquer mudança de conteúdo gera uma nova.
 - Ao criar, o pedido reserva o estoque e fica `pending`. A liquidação (`confirmed` ou `declined`) acontece por timestamp (`settleAt`). Por isso ela sobrevive a refresh e queda de conexão: cada requisição e um `setInterval` liquidam o que venceu. A confirmação remove do carrinho **só os itens e quantidades comprados**. A recusa devolve o estoque e não toca no carrinho. Os estados `confirmed` e `declined` são terminais.
 - O pedido guarda um **snapshot** (itens, preços, totais, carteira e rede): mudanças no catálogo não alteram o recibo. Hash de transação e link do explorer são simulados.
 
@@ -135,7 +136,7 @@ Envelope comum:
 **Cliente (`api/realtime.ts`):**
 
 - **Duplicatas:** `eventId` já visto é ignorado (conjunto dos últimos 500).
-- **Eventos antigos:** `version` ≤ à conhecida (memória ou cache) é ignorado, então um estado mais recente nunca regride e efeitos não se repetem.
+- **Eventos antigos:** um evento com `version` ≤ à maior conhecida é ignorado. A comparação considera a memória e as versões que detalhe, listas e destaques já receberam da REST, e cada item só é atualizado se a versão dele for menor. Assim, um estado mais recente nunca regride, nem depois de um reload ou de uma reconexão, e efeitos não se repetem.
 - `nft.updated` atualiza o cache do detalhe, das listas e dos destaques, **invalida** carrinho e cotação (os valores vêm da API) e avisa a UI (toast com `aria-live` e indicação "de → para" na linha do carrinho).
 - `order.updated` só é aplicado se `userId` for o da sessão atual (defesa extra além do filtro do servidor).
 - **Reconexão:** ao reconectar, `invalidateQueries({ refetchType: 'active' })` reconcilia pela REST tudo o que estiver na tela. Eventos perdidos na queda não se perdem de fato.
@@ -155,9 +156,9 @@ O servidor é simulado com `ws.link('<VITE_SOCKET_URL>/*')` do MSW + `@mswjs/soc
 ## Sessão
 
 - `POST /auth/login|register` devolve `{ token, expiresAt, user }`. O cliente guarda só `token`, `expiresAt` e `userId` em `localStorage` (`session-store.ts`), e o perfil vem da API. A sessão sobrevive a refresh. Uma sessão vencida com a aba fechada é descartada no boot.
-- **Expiração:** o cliente agenda a expiração local para `expiresAt`, e qualquer 401 com token também encerra a sessão (`reason: 'expired'`). O layout raiz mostra o aviso e, em página privada, leva ao login com `redirect` para a mesma página. O rascunho do pagamento fica em `sessionStorage` e é restaurado na volta.
-- **Logout e troca de usuário:** removem todo o cache privado (`['user', …]`) e fecham o socket. Em página privada, o logout leva à Início.
-- As senhas existem só no banco simulado, como SHA-256 com salt. A troca de senha gera um salt novo.
+- **Expiração:** o cliente agenda a expiração local para `expiresAt`, e um 401 encerra a sessão (`reason: 'expired'`) **só se o token recusado for o da sessão atual**. Respostas atrasadas de uma sessão anterior não derrubam a nova. O layout raiz mostra o aviso e, em página privada, leva ao login com `redirect` para a mesma página. O rascunho do pagamento fica em `sessionStorage` e é restaurado na volta.
+- **Logout e troca de usuário:** removem todo o cache privado (`['user', …]`), fecham o socket e limpam o cupom aplicado. Em página privada, o logout leva à Início.
+- As senhas existem só no banco simulado, como SHA-256 com salt. A troca de senha gera um salt novo e revoga as outras sessões do usuário.
 
 ## Carrinho
 
@@ -189,12 +190,12 @@ O servidor é simulado com `ws.link('<VITE_SOCKET_URL>/*')` do MSW + `@mswjs/soc
 | Troca de filtros/página | `placeholderData: keepPreviousData`: a lista anterior continua visível, esmaecida e com `aria-busy`, até a nova chegar; skeleton só no primeiro carregamento |
 | Isolamento por usuário | Dados privados ficam sob `['user', <userId \| guest:id>, …]` e são removidos no login, logout e expiração. A lista de favoritos usa chave privada |
 | Invalidação | Mutations de carrinho gravam o carrinho e invalidam a cotação. `nft.updated` invalida carrinho e cotação. `order.updated` invalida pedidos e, se confirmado, o carrinho. A reconexão invalida as consultas ativas |
-| Atualização otimista | Favoritos (`lib/favorites.ts`): `onMutate` aplica, `onError` faz rollback e avisa, `onSuccess` grava a resposta, `onSettled` revalida |
+| Atualização otimista | Favoritos (`lib/favorites.ts`): `onMutate` aplica, `onError` faz rollback e avisa, `onSuccess` grava a resposta, `onSettled` revalida. As mutations rodam em série (`scope`), então cliques rápidos não se cruzam |
 | Background | `refetchOnWindowFocus` ligado; pedido pendente com `refetchInterval` de 2 s |
 
 ## Mocks (MSW)
 
-- **Estado consistente:** um único banco (`db.ts`) para catálogo, contas, sessões, favoritos, carrinhos, carteiras e pedidos, persistido em `localStorage`. Mudar preço ou estoque (`updateEdition`) altera a resposta REST **e** emite `nft.updated`; os pedidos emitem `order.updated`.
+- **Estado consistente:** um único banco (`db.ts`), relido do `localStorage` antes de cada requisição quando outra aba o alterou, para catálogo, contas, sessões, favoritos, carrinhos, carteiras e pedidos, persistido em `localStorage`. Mudar preço ou estoque (`updateEdition`) altera a resposta REST **e** emite `nft.updated`; os pedidos emitem `order.updated`.
 - **Fixtures determinísticas:** 48 NFTs (os 9 do Figma mais 39 gerados) em 9 categorias e 3 redes, com 4 edições cada (1/1, 1/10, 1/50, aberta); estoques e esgotados variados; 2 usuários; 3 cupons. `?mockReset=1` restaura tudo.
 - **Cenários reproduzíveis:** latência fixa por padrão (150 ms). `jitter` usa um PRNG com semente fixa (mulberry32), então a ordem das respostas se repete a cada execução. Os cenários "uma vez" (preço sobe ou esgota na compra) disparam só na primeira tentativa.
 - **Mesmos handlers em dev, demo e testes.** Os testes usam `window.__kurio` para disparar eventos pelo servidor simulado. O Socket.IO nunca é contornado chamando setters ou o cache diretamente.
@@ -218,6 +219,8 @@ Cada teste parte de `?mockReset=1` (estado isolado). A latência é fixa por cen
 - Formulários têm rótulos (visuais ou só para leitores de tela, conforme o Figma), erros ligados por `aria-describedby`/`aria-invalid` e foco no primeiro campo inválido.
 - Feedback de mutations e de tempo real em `aria-live` (toasts sonner e regiões de status); a contagem de resultados do catálogo também é anunciada.
 - Estados não dependem só de cor: esgotado é texto mais riscado mais desabilitado, item ativo usa `aria-current`/`aria-pressed`, e botões de alternância mantêm o nome acessível fixo.
+- Padrões de teclado: o seletor de edição (radiogroup) e as abas do Detalhe têm um único ponto de Tab e navegação por setas. As abas do catálogo são filtros, então são botões com `aria-pressed`.
+- Foco preservado depois de ações que removem o elemento focado: remover item do carrinho, fechar a busca, salvar carteira e erros de campo vindos da revisão do pagamento.
 - Skeletons respeitam `prefers-reduced-motion`, assim como a rolagem ao trocar de página.
 - Lighthouse Accessibility = 100 nas quatro combinações auditadas.
 
@@ -260,7 +263,7 @@ O Figma foi seguido como fonte visual (desktop 1440 e mobile 414). Desvios e com
 ## Limitações conhecidas
 
 - Não há backend real. Blockchain, carteiras e gateways são simulados, e hash e explorer são fictícios.
-- O estado simulado vive no `localStorage` de cada navegador. Abas simultâneas não se sincronizam em tempo real (os eventos só chegam aos sockets da mesma aba), e limpar o armazenamento equivale a um reset.
+- O estado simulado vive no `localStorage` de cada navegador. Abas simultâneas compartilham os dados (cada requisição relê o banco), mas os eventos em tempo real só chegam aos sockets da aba em que a mudança aconteceu. Limpar o armazenamento equivale a um reset.
 - O MSW vai no bundle de demonstração (exigência do desafio), o que custa ~140 KB gzip e explica a performance mobile.
 - As baselines visuais dependem de Linux/Chromium. Os testes que preparam dados importando `/src` exigem o servidor de desenvolvimento.
 - A busca procura no nome e na coleção (ex.: "golden" traz a coleção "Golden Sessions"). O tamanho de página é fixo (9).

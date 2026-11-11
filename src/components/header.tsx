@@ -34,12 +34,19 @@ function NavItem({ label, to, active }: { label: string; to?: '/'; active?: bool
 function HeaderSearch() {
   const [open, setOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  // Ao fechar, o campo some: o foco volta para a lupa.
+  const close = () => {
+    setOpen(false)
+    requestAnimationFrame(() => triggerRef.current?.focus())
+  }
   const navigate = useNavigate()
   const id = useId()
 
   if (!open) {
     return (
       <button
+        ref={triggerRef}
         type="button"
         aria-label="Buscar NFTs"
         className="grid size-9 place-items-center rounded-md hover:bg-surface"
@@ -60,7 +67,7 @@ function HeaderSearch() {
         e.preventDefault()
         const value = inputRef.current?.value.trim() ?? ''
         void navigate({ to: '/', search: (prev: Record<string, unknown>) => ({ ...prev, q: value || undefined, page: undefined }) })
-        setOpen(false)
+        close()
       }}
     >
       <label htmlFor={id} className="sr-only">
@@ -72,9 +79,9 @@ function HeaderSearch() {
         type="search"
         placeholder="Buscar NFTs..."
         className="h-9 w-48 rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-        onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}
+        onKeyDown={(e) => e.key === 'Escape' && close()}
       />
-      <button type="button" aria-label="Fechar busca" className="grid size-9 place-items-center" onClick={() => setOpen(false)}>
+      <button type="button" aria-label="Fechar busca" className="grid size-9 place-items-center" onClick={close}>
         <X className="size-4" aria-hidden />
       </button>
     </form>

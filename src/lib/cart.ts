@@ -15,9 +15,11 @@ function useCartMutation<TVars>(fn: (vars: TVars) => Promise<Cart>) {
   const client = useQueryClient()
   return useMutation({
     mutationFn: fn,
+    // Escopo capturado no início: se o login terminar no meio, não grava o carrinho no usuário errado.
+    onMutate: () => ({ scope: scope() }),
     // A API devolve o carrinho inteiro: grava direto no cache e recalcula a cotação.
-    onSuccess: (cart) => {
-      const s = scope()
+    onSuccess: (cart, _vars, context) => {
+      const s = context.scope
       client.setQueryData(keys.cart(s), cart)
       void client.invalidateQueries({ queryKey: [...keys.private(s), 'quote'] })
     },

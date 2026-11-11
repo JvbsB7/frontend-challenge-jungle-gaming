@@ -6,6 +6,7 @@ import { createQueryClient, keys } from './api/queries'
 import { connectRealtime } from './api/realtime'
 import { sessionStore, type StoredSession } from './api/session-store'
 import './index.css'
+import { setCoupon } from './lib/coupon-store'
 import { routeTree } from './routeTree.gen'
 
 const queryClient = createQueryClient()
@@ -30,7 +31,9 @@ export function startApp() {
   // descarta todo dado privado do cache e abre um socket novo com o token atual.
   let disconnectRealtime = connectRealtime(queryClient, sessionStore.get())
   scheduleExpiry(sessionStore.get())
-  sessionStore.subscribe((session) => {
+  sessionStore.subscribe((session, reason) => {
+    // Cupom aplicado não passa para o próximo usuário do aparelho (de visitante para login, continua).
+    if (reason !== 'login') setCoupon(undefined)
     disconnectRealtime()
     queryClient.removeQueries({ queryKey: keys.user })
     disconnectRealtime = connectRealtime(queryClient, session)

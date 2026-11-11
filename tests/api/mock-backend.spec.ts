@@ -112,3 +112,33 @@ test('pedido de outro usuário não é visível nem chega pelo socket', async ({
   expect(result.expired).toBe('SESSION_EXPIRED')
   expect(result.sessionAfter).toBeNull()
 })
+
+test('validação na borda da API e um pedido pendente por vez', async ({ page }) => {
+  await boot(page)
+  const result = await page.evaluate(async () => {
+    const { http } = await import('/src/api/client.ts')
+    const { api } = await import('/src/api/endpoints.ts')
+    const { sessionStore } = await import('/src/api/session-store.ts')
+    const code = (p: Promise<unknown>) => p.then(() => 'ok', (e: { status: number; code: string }) => `${e.status} ${e.code}`)
+    const nullBody = await code(http.post('/cart/items', 'null', { headers: { 'Content-Type': 'application/json' } }))
+    const negative = await code(api.addToCart({ nftId: 'nft-001', editionId: 'e50', quantity: -2 }))
+    sessionStore.set(await api.login({ email: 'ana@kurio.test', password: 'Kurio@123' }))
+    await api.addToCart({ nftId: 'nft-001', editionId: 'e50', quantity: 1 })
+    const quote = await api.quote({ network: 'ethereum' })
+    const buyer = {
+      displayName: 'Ana Souza', username: 'ana', network: 'ethereum' as const, profileName: 'ana',
+      address: '0x8ba1f109551bD432803012645Ac136ddd64DBA72', provider: 'metamask' as const,
+      referralCode: 'X', email: 'ana@kurio.test', ensName: 'anasouza',
+    }
+    const input = { quoteId: quote.quoteId, network: 'ethereum' as const, walletSlot: 'primary' as const, buyer }
+    await api.createOrder(input, 'chave-a')
+    // Outra chave (ex.: outra aba) enquanto o primeiro está pendente: recusado, sem reservar de novo.
+    const second = await code(api.createOrder(input, 'chave-b'))
+    const sameKey = await code(api.createOrder(input, 'chave-a'))
+    return { nullBody, negative, second, sameKey }
+  })
+  expect(result.nullBody).toBe('400 VALIDATION')
+  expect(result.negative).toBe('400 VALIDATION')
+  expect(result.second).toBe('409 CONFLICT')
+  expect(result.sameKey).toBe('ok')
+})

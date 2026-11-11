@@ -107,8 +107,15 @@ function ProfileForm({ user }: { user: User }) {
     mutationFn: async () => {
       const updated = await api.updateProfile(values)
       client.setQueryData(keys.profile(scope()), updated)
-      if (pw.newPassword) await api.changePassword({ currentPassword: pw.currentPassword, newPassword: pw.newPassword })
-      return !!pw.newPassword
+      if (!pw.newPassword) return false
+      try {
+        await api.changePassword({ currentPassword: pw.currentPassword, newPassword: pw.newPassword })
+      } catch (error) {
+        // O perfil já foi salvo: avisa isso antes de mostrar o erro da senha.
+        toast.success('Perfil atualizado.')
+        throw error
+      }
+      return true
     },
     onSuccess: (passwordChanged) => {
       setPw({ currentPassword: '', newPassword: '', confirm: '' })

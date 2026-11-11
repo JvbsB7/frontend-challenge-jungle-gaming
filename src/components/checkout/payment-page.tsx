@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link, useRouter } from '@tanstack/react-router'
 import { ChevronLeft, Wallet as WalletIcon } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { cn } from 'cn'
 import { ApiError } from '@/api/client'
 import { type BuyerInput, type User, type Wallet, type WalletProvider, type WalletSlot } from '@/api/contracts'
@@ -38,6 +38,8 @@ function Radio({ checked }: { checked: boolean }) {
 
 /** "Carteira e rede": provedores (radio) — igual no desktop (lista) e no mobile (cards). */
 function ProviderPicker({ value, onChange }: { value?: WalletProvider; onChange: (p: WalletProvider) => void }) {
+  // Nome único por instância: as versões mobile e desktop não podem formar um só grupo de rádio.
+  const name = useId()
   return (
     <fieldset className="flex flex-col gap-3">
       <legend className="mb-3 text-base font-bold md:w-full md:text-center">Carteira e rede</legend>
@@ -49,15 +51,17 @@ function ProviderPicker({ value, onChange }: { value?: WalletProvider; onChange:
             value === p && 'md:border-primary',
           )}
         >
-          <input type="radio" name="provider" value={p} checked={value === p} onChange={() => onChange(p)} className="sr-only" />
+          <input type="radio" name={name} value={p} checked={value === p} onChange={() => onChange(p)} className="sr-only" />
           <span className="grid size-10 place-items-center rounded-full border border-border text-sm font-bold text-brand md:hidden" aria-hidden>
             {p === 'coinbase' ? <WalletIcon className="size-4" /> : PROVIDER_LABEL[p][0]}
           </span>
           <span className="max-md:order-none md:order-1 max-md:flex-1">
             {p === 'walletconnect' ? (
               <>
-                <span className="md:hidden">WalletConnect</span>
-                <span className="hidden rounded-md border border-border bg-surface px-2 py-1 text-[9px] font-bold text-brand md:inline">METAMASK • WALLETCONNECT • COINBASE</span>
+                <span className="max-md:inline md:sr-only">WalletConnect</span>
+                <span className="hidden rounded-md border border-border bg-surface px-2 py-1 text-[9px] font-bold text-brand md:inline" aria-hidden>
+                  METAMASK • WALLETCONNECT • COINBASE
+                </span>
               </>
             ) : (
               PROVIDER_LABEL[p]
@@ -177,7 +181,9 @@ export function PaymentPage({ userId }: { userId: string }) {
   // Avisos de preço/estoque valem fora da revisão; durante o envio, a própria compra reserva estoque.
   useCartNotices(!reviewing)
 
-  const wallet = wallets.data?.find((w) => w.slot === slot)
+  // Rascunho pode apontar para uma carteira já removida: usa a primeira cadastrada.
+  const effectiveSlot: WalletSlot = wallets.data?.some((w) => w.slot === slot) ? slot : (wallets.data?.[0]?.slot ?? slot)
+  const wallet = wallets.data?.find((w) => w.slot === effectiveSlot)
   const values: BuyerValues = { ...walletToBuyer(wallet, profile.data), ...edits }
   const network = values.network ?? 'ethereum'
 
@@ -188,7 +194,7 @@ export function PaymentPage({ userId }: { userId: string }) {
   const pending = useQuery({ ...q.order(pendingId ?? ''), enabled: !!pendingId })
 
   const connect = useMutation({
-    mutationFn: () => api.connectWallet(slot),
+    mutationFn: () => api.connectWallet(effectiveSlot),
     onMutate: () => setConnection({ status: 'connecting' }),
     onSuccess: (r) => {
       setConnection({ status: 'connected', address: r.address })
@@ -235,7 +241,7 @@ export function PaymentPage({ userId }: { userId: string }) {
         open={reviewing}
         onOpenChange={setReviewing}
         userId={userId}
-        input={{ network, couponCode: coupon, walletSlot: slot, buyer: values as BuyerInput }}
+        input={{ network, couponCode: coupon, walletSlot: effectiveSlot, buyer: values as BuyerInput }}
         onFieldErrors={(fields) => {
           setErrors(fields)
           focusFirstInvalid(formRef.current)
@@ -293,7 +299,7 @@ export function PaymentPage({ userId }: { userId: string }) {
       ) : (
         <div className="mt-4 grid gap-8 lg:grid-cols-[1fr_294px] lg:gap-6">
           <section aria-labelledby="perfil-colecionador" className="flex flex-col gap-6">
-            <WalletList wallets={wallets.data ?? []} slot={slot} onSelect={selectSlot} />
+            <WalletList wallets={wallets.data ?? []} slot={effectiveSlot} onSelect={selectSlot} />
             <div ref={formRef} className="hidden flex-col gap-4 md:flex [&_label]:text-sm">
               <h2 id="perfil-colecionador" className="text-base font-bold">
                 Perfil do colecionador
@@ -303,11 +309,11 @@ export function PaymentPage({ userId }: { userId: string }) {
                 <input
                   type="checkbox"
                   className="sr-only"
-                  checked={slot === 'secondary'}
+                  checked={effectiveSlot === 'secondary'}
                   disabled={!secondary}
                   onChange={(e) => selectSlot(e.target.checked ? 'secondary' : 'primary')}
                 />
-                <Radio checked={slot === 'secondary'} />
+                <Radio checked={effectiveSlot === 'secondary'} />
                 Usar outra carteira?
                 {!secondary && (
                   <Link to="/carteiras" className="text-brand underline">

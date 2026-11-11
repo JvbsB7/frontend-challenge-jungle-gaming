@@ -43,6 +43,7 @@ export function createSession(userId: string): Session {
   const s = db()
   const token = `tok_${crypto.randomUUID()}`
   const expiresAt = Date.now() + (has('short-session') ? SHORT_SESSION_TTL_MS : SESSION_TTL_MS)
+  s.sessions = s.sessions.filter((x) => x.expiresAt > Date.now()) // não acumula sessões vencidas
   s.sessions.push({ token, userId, expiresAt })
   commit()
   const user = s.users.find((u) => u.id === userId)!
@@ -157,7 +158,7 @@ export function listNfts(url: URL, user: UserRecord | null): NftListResponse {
   })
   const count = <K extends string>(keys: readonly K[], pick: (n: Nft) => K) =>
     Object.fromEntries(keys.map((k) => [k, base.filter((n) => pick(n) === k).length])) as Record<K, number>
-  const prices = db().nfts.map((n) => n.price).sort(compareEth)
+  const prices = all.map((n) => n.price).sort(compareEth)
   return {
     items: sorted.slice((page - 1) * pageSize, page * pageSize).map(toSummary),
     page,
@@ -250,6 +251,7 @@ function touchCart(key: string): void {
 
 export function addToCart(key: string, input: { nftId: string; editionId: string; quantity: number }): Cart {
   const { ed } = edition(input.nftId, input.editionId)
+  assertQuantity(input.quantity, Number.MAX_SAFE_INTEGER) // inteiro ≥ 1 (o limite real vem abaixo)
   const lines = (db().carts[key] ??= [])
   const existing = lines.find((l) => l.nftId === input.nftId && l.editionId === input.editionId)
   const quantity = assertQuantity((existing?.quantity ?? 0) + input.quantity, ed.available)
@@ -297,8 +299,9 @@ export function mergeGuestCart(guestId: string | null, userId: string): void {
 
 // ---------- Cotação ----------
 
-function couponFor(code: string | undefined) {
-  if (!code) return undefined
+function couponFor(code: unknown) {
+  if (code === undefined || code === null || code === '') return undefined
+  if (typeof code !== 'string') throw new HttpError(400, { code: 'VALIDATION', message: 'Cupom inválido.', fields: { couponCode: 'Cupom inválido' } })
   const normalized = code.trim().toUpperCase()
   const coupon = COUPONS[normalized]
   if (!coupon) throw new HttpError(422, { code: 'COUPON_INVALID', message: 'Cupom inválido.', fields: { couponCode: 'Cupom inválido' } })
@@ -340,7 +343,17 @@ export function publicOrder({ userId: _u, idempotencyKey: _k, fingerprint: _f, s
 
 export function createOrder(user: UserRecord, idempotencyKey: string, input: CreateOrderInput): { order: OrderRecord; created: boolean } {
   const s = db()
-  const fingerprint = fnv1a(JSON.stringify(input))
+  // Conteúdo normalizado: ordem de chaves e caixa do cupom não mudam o "mesmo pedido".
+  const b = input.buyer ?? ({} as CreateOrderInput['buyer'])
+  const fingerprint = fnv1a(
+    JSON.stringify([
+      input.quoteId,
+      String(input.couponCode ?? '').trim().toUpperCase(),
+      input.network,
+      input.walletSlot,
+      Object.keys(b).sort().map((k) => [k, b[k as keyof typeof b]]),
+    ]),
+  )
   const previous = s.orders.find((o) => o.userId === user.id && o.idempotencyKey === idempotencyKey)
   if (previous) {
     if (previous.fingerprint !== fingerprint) {
@@ -349,9 +362,19 @@ export function createOrder(user: UserRecord, idempotencyKey: string, input: Cre
     return { order: previous, created: false }
   }
 
+  // Um pedido por vez: outro pendente já reservou este carrinho (evita cobrar duas vezes).
+  const pending = s.orders.find((o) => o.userId === user.id && o.status === 'pending')
+  if (pending) {
+    throw new HttpError(409, { code: 'CONFLICT', message: 'Você já tem um pedido em processamento. Aguarde a confirmação.', details: { orderId: pending.id } })
+  }
+
   const key = `user:${user.id}`
   const wallet = s.wallets[user.id]?.find((w) => w.slot === input.walletSlot)
   if (!wallet) throw new HttpError(400, { code: 'VALIDATION', message: 'Carteira não cadastrada.', fields: { walletSlot: 'Cadastre a carteira antes de pagar' } })
+  // A rede do pedido é a do endereço que paga (validado contra ela no handler).
+  if (input.buyer?.network !== input.network) {
+    throw new HttpError(422, { code: 'VALIDATION', message: 'A rede do pedido difere da rede da carteira.', fields: { network: 'Use a mesma rede da carteira' } })
+  }
 
   // Cenários de mudança durante a compra: aplicados antes da revalidação.
   const firstLine = s.carts[key]?.[0]
@@ -384,8 +407,8 @@ export function createOrder(user: UserRecord, idempotencyKey: string, input: Cre
     createdAt: now,
     updatedAt: now,
     network: input.network,
-    provider: wallet.provider,
-    walletAddress: wallet.address,
+    provider: input.buyer.provider,
+    walletAddress: input.buyer.address,
     items: quote.items.map(({ nftId, editionId, name, image, tokenId, editionLabel, quantity, unitPrice, lineTotal }) => ({
       nftId, editionId, name, image, tokenId, editionLabel, quantity, unitPrice, lineTotal,
     })),

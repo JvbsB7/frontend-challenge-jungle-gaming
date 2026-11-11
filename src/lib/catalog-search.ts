@@ -27,12 +27,15 @@ const pick = <T extends string>(value: unknown, allowed: readonly T[]): T | unde
 export function parseCatalogSearch(raw: Record<string, unknown>): CatalogSearch {
   const page = Number(raw.page)
   const price = (v: unknown) => (typeof v === 'string' || typeof v === 'number') && isEth(String(v)) ? String(v) : undefined
+  const minPrice = price(raw.minPrice)
+  let maxPrice = price(raw.maxPrice)
+  if (minPrice && maxPrice && Number(maxPrice) < Number(minPrice)) maxPrice = undefined // faixa invertida
   return {
     q: typeof raw.q === 'string' && raw.q.trim() ? raw.q.trim().slice(0, 80) : undefined,
     category: list(raw.category, CATEGORIES),
     network: list(raw.network, NETWORKS),
-    minPrice: price(raw.minPrice),
-    maxPrice: price(raw.maxPrice),
+    minPrice,
+    maxPrice,
     tab: pick(raw.tab, NFT_TABS),
     sort: pick(raw.sort, NFT_SORTS),
     page: Number.isInteger(page) && page > 1 ? page : undefined,

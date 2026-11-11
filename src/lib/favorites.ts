@@ -23,6 +23,8 @@ export function useToggleFavorite() {
   const { href } = useLocation()
 
   const mutation = useMutation({
+    // Em série: cliques rápidos não se cruzam (um rollback não apaga outro favorito).
+    scope: { id: 'favorites' },
     mutationFn: ({ nftId, favorite }: { nftId: string; favorite: boolean; name: string }) =>
       favorite ? api.addFavorite(nftId) : api.removeFavorite(nftId),
     onMutate: async ({ nftId, favorite }) => {
@@ -43,7 +45,10 @@ export function useToggleFavorite() {
       client.setQueryData(context.key, data)
       toast.success(favorite ? `"${name}" adicionado aos favoritos.` : `"${name}" removido dos favoritos.`)
     },
-    onSettled: () => client.invalidateQueries({ queryKey: [...keys.private(scope()), 'nfts'] }),
+    onSettled: (_d, _e, _v, context) => {
+      if (context) void client.invalidateQueries({ queryKey: context.key })
+      void client.invalidateQueries({ queryKey: [...keys.private(scope()), 'nfts'] })
+    },
   })
 
   return (nftId: string, name: string, favorite: boolean) => {

@@ -13,7 +13,7 @@ import type {
   WalletSlot,
 } from '@/api/contracts'
 import { API_BASE, GUEST_HEADER, IDEMPOTENCY_HEADER, NETWORKS, WALLET_PROVIDERS } from '@/api/contracts'
-import { commit, db, hashPassword, newSalt } from './db'
+import { commit, db, hashPassword, newSalt, syncFromStorage } from './db'
 import {
   addToCart,
   buildCart,
@@ -51,6 +51,7 @@ function route(method: Method, path: string, handler: (ctx: Ctx) => unknown, sta
     const early = await applyNetwork(request, routeKey)
     if (early) return early
     try {
+      syncFromStorage()
       settleDueOrders()
       const body = await handler({ request, params: params as Record<string, string>, url: new URL(request.url) })
       if (body instanceof Response) return body
@@ -64,11 +65,17 @@ function route(method: Method, path: string, handler: (ctx: Ctx) => unknown, sta
 }
 
 async function json<T>(request: Request): Promise<T> {
+  let body: unknown
   try {
-    return (await request.json()) as T
+    body = await request.json()
   } catch {
+    body = undefined
+  }
+  // Corpo ausente, null ou não-objeto é erro do cliente (400), não falha temporária (500).
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw new HttpError(400, { code: 'VALIDATION', message: 'Corpo da requisição inválido.' })
   }
+  return body as T
 }
 
 // ---------- Validação ----------
@@ -292,6 +299,9 @@ export const httpHandlers = [
     })
     user.salt = newSalt()
     user.passwordHash = await hashPassword(input.newPassword, user.salt)
+    // Outras sessões do usuário deixam de valer; a atual continua.
+    const current = request.headers.get('Authorization')?.slice(7)
+    db().sessions = db().sessions.filter((x) => x.userId !== user.id || x.token === current)
     commit()
   }),
 

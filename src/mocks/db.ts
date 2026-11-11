@@ -47,6 +47,8 @@ export interface DbState {
 const STORAGE_KEY = 'kurio.mock.db.v1'
 
 let state: DbState | undefined
+// Último JSON lido/gravado: se outra aba gravar algo diferente, recarregamos antes de usar.
+let lastRaw: string | null = null
 
 export async function hashPassword(password: string, salt: string): Promise<string> {
   const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${salt}:${password}`))
@@ -98,6 +100,7 @@ export async function initDb(): Promise<void> {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       state = JSON.parse(raw) as DbState
+      lastRaw = raw
       return
     }
   } catch {
@@ -116,9 +119,23 @@ export function db(): DbState {
   return state
 }
 
+/** Recarrega o estado se outra aba o alterou (cada aba roda sua cópia do backend simulado). */
+export function syncFromStorage(): void {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw && raw !== lastRaw) {
+      state = JSON.parse(raw) as DbState
+      lastRaw = raw
+    }
+  } catch {
+    // storage indisponível: segue com o estado em memória
+  }
+}
+
 export function commit(): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    lastRaw = JSON.stringify(state)
+    localStorage.setItem(STORAGE_KEY, lastRaw)
   } catch {
     // storage cheio/bloqueado: mantém só em memória
   }

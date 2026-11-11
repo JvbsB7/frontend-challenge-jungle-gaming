@@ -119,7 +119,7 @@ function WalletsPage() {
                 </button>
               )}
             </header>
-            <WalletForm key={primary?.updatedAt ?? 'novo'} slot="primary" wallet={primary} />
+            <WalletForm slot="primary" wallet={primary} />
           </section>
 
           <section aria-labelledby="carteira-secundaria" className="flex flex-col gap-6">
@@ -161,7 +161,7 @@ function WalletsPage() {
             {(secondary || addingSecondary) && (
               <WalletForm
                 // Remonta ao marcar "Igual à principal" para copiar os dados.
-                key={`${secondary?.updatedAt ?? 'novo'}-${sameAsPrimary}`}
+                key={`secundaria-${sameAsPrimary}`}
                 slot="secondary"
                 wallet={secondary}
                 initial={sameAsPrimary ? toValues(primary) : undefined}

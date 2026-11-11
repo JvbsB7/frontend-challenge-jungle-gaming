@@ -47,6 +47,9 @@ http.interceptors.response.use(undefined, (error: unknown) => {
     details: body?.details,
   })
   // Token recusado: encerra a sessão local; a UI redireciona preservando o contexto.
-  if (apiError.status === 401 && error.config?.headers?.Authorization) sessionStore.clear('expired')
+  // Só se o token recusado for o da sessão atual: uma resposta atrasada de uma sessão
+  // anterior (logout/troca de usuário) não pode derrubar a sessão nova.
+  const current = sessionStore.get()
+  if (apiError.status === 401 && current && error.config?.headers?.Authorization === `Bearer ${current.token}`) sessionStore.clear('expired')
   throw apiError
 })

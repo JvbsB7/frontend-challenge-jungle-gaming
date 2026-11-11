@@ -96,11 +96,31 @@ function Gallery({ nft }: { nft: Nft }) {
   )
 }
 
+/** Setas movem entre itens de um grupo (rádio/abas), pulando os desabilitados; foca e seleciona. */
+function onArrowKeys(e: React.KeyboardEvent<HTMLElement>, select: (el: HTMLElement) => void) {
+  const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0
+  if (!step) return
+  e.preventDefault()
+  const items = [...e.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')]
+  const i = items.indexOf(document.activeElement as HTMLButtonElement)
+  const next = items[(i + step + items.length) % items.length]
+  next?.focus()
+  if (next) select(next)
+}
+
 function EditionPicker({ nft, value, onChange }: { nft: Nft; value?: Edition; onChange: (e: Edition) => void }) {
+  const legendId = useId()
   return (
-    <fieldset className="flex flex-col gap-3">
-      <legend className="mb-3 text-[15px] leading-4 font-bold">Edição:</legend>
-      <div role="radiogroup" aria-label="Edição" className="flex flex-wrap gap-1.5">
+    <div className="flex flex-col gap-3">
+      <p id={legendId} className="text-[15px] leading-4 font-bold">
+        Edição:
+      </p>
+      <div
+        role="radiogroup"
+        aria-labelledby={legendId}
+        className="flex flex-wrap gap-1.5"
+        onKeyDown={(ev) => onArrowKeys(ev, (el) => el.click())}
+      >
         {nft.editions.map((e) => {
           const selected = e.id === value?.id
           const soldOut = e.available === 0
@@ -110,6 +130,8 @@ function EditionPicker({ nft, value, onChange }: { nft: Nft; value?: Edition; on
               type="button"
               role="radio"
               aria-checked={selected}
+              // Um só ponto de Tab no grupo; setas navegam entre as opções.
+              tabIndex={selected ? 0 : -1}
               disabled={soldOut}
               onClick={() => onChange(e)}
               className={cn(
@@ -124,7 +146,7 @@ function EditionPicker({ nft, value, onChange }: { nft: Nft; value?: Edition; on
           )
         })}
       </div>
-    </fieldset>
+    </div>
   )
 }
 
@@ -180,7 +202,12 @@ function DetailsTabs({ nft }: { nft: Nft }) {
   ]
   return (
     <section className="mt-16 md:mt-24">
-      <div role="tablist" aria-label="Informações do NFT" className="flex gap-5 border-b border-primary">
+      <div
+        role="tablist"
+        aria-label="Informações do NFT"
+        className="flex gap-5 border-b border-primary"
+        onKeyDown={(ev) => onArrowKeys(ev, (el) => el.click())}
+      >
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -189,6 +216,7 @@ function DetailsTabs({ nft }: { nft: Nft }) {
             type="button"
             aria-selected={tab === t.id}
             aria-controls={`painel-${t.id}`}
+            tabIndex={tab === t.id ? 0 : -1}
             onClick={() => setTab(t.id)}
             className={cn('-mb-px border-b-2 pb-2 text-sm md:text-base', tab === t.id ? 'border-brand font-bold text-brand' : 'border-transparent')}
           >
@@ -196,8 +224,7 @@ function DetailsTabs({ nft }: { nft: Nft }) {
           </button>
         ))}
       </div>
-      <div id={`painel-${tab}`} role="tabpanel" aria-labelledby={`tab-${tab}`} className="flex flex-col gap-4 pt-4 text-sm leading-6 text-muted-foreground">
-        {tab === 'details' ? (
+      <div id="painel-details" role="tabpanel" aria-labelledby="tab-details" hidden={tab !== 'details'} className="flex flex-col gap-4 pt-4 text-sm leading-6 text-muted-foreground">
           <>
             <p>
               {nft.name} é uma obra digital da coleção {nft.collection}. Cada atributo fica armazenado nos metadados do token e verificado na{' '}
@@ -219,9 +246,9 @@ function DetailsTabs({ nft }: { nft: Nft }) {
               </div>
             </dl>
           </>
-        ) : (
-          <p>As avaliações detalhadas não fazem parte desta demonstração. Nota média: {nft.rating} de 5.</p>
-        )}
+      </div>
+      <div id="painel-reviews" role="tabpanel" aria-labelledby="tab-reviews" hidden={tab !== 'reviews'} className="pt-4 text-sm leading-6 text-muted-foreground">
+        <p>As avaliações detalhadas não fazem parte desta demonstração. Nota média: {nft.rating} de 5.</p>
       </div>
     </section>
   )
