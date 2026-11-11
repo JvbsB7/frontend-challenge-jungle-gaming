@@ -70,7 +70,7 @@ function CartPage() {
       </header>
       <h1 className="sr-only max-md:hidden">Carrinho de NFTs</h1>
 
-      <div className="mt-3 grid gap-8 md:grid-cols-[1fr_332px] md:gap-16 lg:gap-[86px]">
+      <div className="mt-3 grid grid-cols-1 gap-8 md:grid-cols-[1fr_332px] md:gap-16 lg:gap-[86px]">
         <section id="itens-carrinho" tabIndex={-1} aria-label="Itens do carrinho" className="flex min-w-0 flex-col gap-3 outline-none">
           <div className="hidden grid-cols-[minmax(0,250px)_92px_80px_100px_24px] justify-between border-b border-foreground/20 pr-6 pb-3 font-bold md:grid" aria-hidden>
             <span>NFTs</span>
@@ -106,7 +106,7 @@ function CartPage() {
           )}
         </section>
         {cart && cart.items.length > 0 && (
-          <div className="-mx-4 md:mx-0">
+          <div className="-mx-4 min-w-0 md:mx-0">
             <CartSummary blocked={blocked} />
           </div>
         )}

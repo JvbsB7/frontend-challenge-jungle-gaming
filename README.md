@@ -49,7 +49,7 @@ Para mudar, crie um `.env` (ele não é versionado), por exemplo `VITE_ENABLE_MO
 
 Primeira execução dos testes: `pnpm exec playwright install chromium`. O relatório HTML fica em `playwright-report/`, e os traces das falhas em `test-results/` (`pnpm exec playwright show-report`).
 
-Os testes sobem o `pnpm dev` automaticamente. Para rodá-los contra outra URL (por exemplo, o deploy), use `BASE_URL=https://... pnpm test:e2e`. Os testes que preparam dados importando módulos de `/src` só funcionam contra o servidor de desenvolvimento.
+Os testes sobem o `pnpm dev` automaticamente. Os cenários sensíveis a tempo usam o relógio controlado do Playwright (`page.clock`): expiração de sessão (avança 30 min) e pedido pendente durante queda e refresh (`slow-settlement` + avanço do relógio). Para rodá-los contra outra URL (por exemplo, o deploy), use `BASE_URL=https://... pnpm test:e2e`. Os testes que preparam dados importando módulos de `/src` só funcionam contra o servidor de desenvolvimento.
 
 As baselines visuais foram geradas em **Linux/Chromium**. Em outro sistema a fonte renderiza um pouco diferente: rode a regressão visual em Linux (ou na imagem Docker oficial do Playwright).
 
@@ -92,6 +92,7 @@ O backend simulado guarda o estado no `localStorage` (catálogo, contas, sessõe
 | `payment-declined` | O pagamento é recusado na liquidação |
 | `wallet-refused` | A carteira recusa a conexão |
 | `short-session` | Sessões expiram em 30 s |
+| `slow-settlement` | O pagamento liquida em 60 s (usado com relógio controlado nos testes) |
 
 ### Controles no console (`window.__kurio`)
 

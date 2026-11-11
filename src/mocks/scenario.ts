@@ -18,6 +18,7 @@ export const SCENARIO_FLAGS = {
   'payment-declined': 'Pagamento recusado na liquidação',
   'wallet-refused': 'A carteira recusa a conexão',
   'short-session': 'Sessões expiram em 30 s',
+  'slow-settlement': 'Pagamento liquida em 60 s (para testes com relógio controlado)',
 } as const
 export type ScenarioFlag = keyof typeof SCENARIO_FLAGS
 

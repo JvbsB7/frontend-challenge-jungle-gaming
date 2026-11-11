@@ -207,10 +207,10 @@ O servidor é simulado com `ws.link('<VITE_SOCKET_URL>/*')` do MSW + `@mswjs/soc
 |---|---|
 | `unit` | Aritmética de ETH (precisão, arredondamento, entradas inválidas) |
 | `api` | Contratos no navegador: compra com cupom, idempotência, liquidação via socket, dedupe/versão de eventos, reconexão, isolamento entre usuários e sessão expirada |
-| `desktop` / `mobile` | Os 12 cenários do enunciado em Chromium (1440 e 390), mais ações de hover, paginação e overflow em 390/768/1024/1440 |
+| `desktop` / `mobile` | Os 12 cenários do enunciado em Chromium (1440 e 390), mais ações de hover, paginação e ausência de overflow/perda de conteúdo em 320/390/640/768/1024/1440 (640 = zoom de 200% e 320 = 400% numa tela de 1280px, reflow WCAG 1.4.10) |
 | `visual-*` | Regressão visual de Início, Detalhe, Carrinho e Pagamento (tolerância de 50 px; validada contra troca de cor) |
 
-Cada teste parte de `?mockReset=1` (estado isolado). A latência é fixa por cenário e os eventos são disparados pelo teste. Há relatório HTML e trace nas falhas, e uma nova tentativa em CI.
+Cada teste parte de `?mockReset=1` (estado isolado). A latência é fixa por cenário e os eventos são disparados pelo teste. **Relógio:** `page.clock` controla o tempo da página (app e backend simulado rodam nela) na expiração de sessão (avanço de 30 min, verificada também no servidor) e no pedido pendente (`slow-settlement`: continua pendente após queda e refresh até o teste avançar o relógio). Exceção: o timeout de 10 s do pedido é o timeout nativo da requisição do navegador, que o relógio falso não controla, então esse teste roda em tempo real. Há relatório HTML e trace nas falhas, e uma nova tentativa em CI.
 
 ## Acessibilidade
 

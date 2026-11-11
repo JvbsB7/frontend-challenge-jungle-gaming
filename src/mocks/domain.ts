@@ -31,6 +31,7 @@ export class HttpError extends Error {
 const SESSION_TTL_MS = 30 * 60_000
 const SHORT_SESSION_TTL_MS = 30_000
 const SETTLE_AFTER_MS = 1500
+const SLOW_SETTLE_AFTER_MS = 60_000
 const MAX_PER_LINE = 10
 
 // ---------- Sessão ----------
@@ -420,7 +421,7 @@ export function createOrder(user: UserRecord, idempotencyKey: string, input: Cre
     userId: user.id,
     idempotencyKey,
     fingerprint,
-    settleAt: Date.now() + SETTLE_AFTER_MS,
+    settleAt: Date.now() + (has('slow-settlement') ? SLOW_SETTLE_AFTER_MS : SETTLE_AFTER_MS),
     outcome: has('payment-declined') ? 'declined' : 'confirmed',
   }
   s.orders.push(order)

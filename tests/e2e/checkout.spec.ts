@@ -104,13 +104,21 @@ test('servidor rejeita cotação desatualizada e o usuário confirma de novo', a
   expect(await orderCount(page)).toBe(1)
 })
 
-test('queda de conexão com pedido pendente: recarregar retoma sem nova compra', async ({ page }) => {
-  await seedAndOpenCheckout(page)
+test('queda de conexão com pedido pendente: recarregar retoma sem nova compra (relógio controlado)', async ({ page }) => {
+  // Liquidação em 60 s + relógio falso: o pedido fica pendente o tempo que o teste quiser.
+  await page.clock.install()
+  await seedAndOpenCheckout(page, 'slow-settlement')
   await openReview(page)
   await page.getByRole('button', { name: 'Confirmar e pagar' }).click()
   await expect(page.getByText('Aguardando confirmação na rede…')).toBeVisible()
+
   await page.evaluate(() => window.__kurio!.dropConnections())
   await page.reload()
+  // Depois do refresh o estado é recuperado: continua pendente, sem nova compra.
+  await expect(page.getByText('Aguardando confirmação na rede…')).toBeVisible()
+  expect(await orderCount(page)).toBe(1)
+
+  await page.clock.fastForward('01:05') // passa do prazo de liquidação
   await expect(page.getByRole('heading', { name: 'Seus NFTs agora estão na sua carteira' })).toBeVisible()
   expect(await orderCount(page)).toBe(1)
   // Pedido confirmado é terminal: reenviar evento antigo não volta para "pendente".

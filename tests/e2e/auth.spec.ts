@@ -98,3 +98,22 @@ test('fechar o login vindo de página privada volta à página anterior (sem cic
   await page.keyboard.press('Escape')
   await expect(page).toHaveURL(/\/nft\/nft-001/)
 })
+
+test('sessão expira pelo tempo (relógio controlado) e volta ao login', async ({ page }) => {
+  // Relógio falso na página: app e backend simulado (que roda na página) usam o mesmo tempo.
+  await page.clock.install()
+  await page.goto('/?mockReset=1&scenario=default')
+  await page.locator('#catalogo article').first().waitFor()
+  await loginViaUi(page, 'ana', '/perfil')
+  await expect(page.getByRole('heading', { name: 'Perfil do colecionador' })).toBeVisible()
+
+  await page.clock.fastForward('30:01') // TTL da sessão: 30 min
+  await expect(page).toHaveURL(/\/entrar\?redirect=%2Fperfil/)
+  await expect(page.getByText('Sua sessão expirou. Entre novamente para continuar.')).toBeVisible()
+  // O servidor também considera o token vencido.
+  const status = await page.evaluate(async () => {
+    const r = await fetch('/api/me/profile', { headers: { Authorization: `Bearer ${JSON.parse(localStorage.getItem('kurio.mock.db.v1')!).sessions.at(-1)?.token}` } })
+    return `${r.status} ${(await r.json()).code}`
+  })
+  expect(status).toBe('401 SESSION_EXPIRED')
+})
